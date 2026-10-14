@@ -344,7 +344,7 @@ GD.forEach(function(g){
       ach:ach,last:3+Math.floor(rnd()*88),log:[{date:'2026-09-02',text:'Ingreso al grupo '+g[0],who:WHO,media:null}]});
   }
 });
-[[27,'Pink'],[33,'Green'],[41,'Queens']].forEach(function(x){var s=students[x[0]];if(s&&s.groups.indexOf(x[1])<0)s.groups.push(x[1])});
+[[27,'Pink'],[33,'Green'],[41,'Queens']].forEach(function(x){var s=students[x[0]];if(s&&s.groups.indexOf(x[1])<0){s.groups.push(x[1]);s.achG={};s.achG[s.groups[0]]=s.ach;var e=emptyAch();e.b[0]=e.b[1]=e.b[2]=true;e.a[0]=true;s.achG[x[1]]=e}});
 var M=[], mid=0, rc=0;
 function addMove(o){o.id=++mid;o.who=o.who||WHO;M.push(o);return o}
 function upsertMove(key,o){M=M.filter(function(m){return m.key!==key});if(o){o.key=key;addMove(o)}}
@@ -470,7 +470,13 @@ function esperado(){return sum(act(),function(s){return PRICE[s.plan]})}
 function recaudado(){return sum(act().filter(function(s){return s.paid}),function(s){return PRICE[s.plan]})}
 function anticipos(){return sum(M.filter(function(m){return m.cat==='anticipo'}),function(m){return m.amount})}
 function rosterOf(c){return act().filter(function(s){return (s.groups.some(function(g){return c.groups.indexOf(g)>=0})&&c.out.indexOf(s.id)<0)||c.extra.indexOf(s.id)>=0})}
-function nAch(s){return sum(['b','a','e'],function(k){return s.ach[k].filter(Boolean).length})}
+function ensureAch(s){if(!s.achG){s.achG={};s.achG[s.groups[0]]=s.ach}}
+function achOf(s,g){ensureAch(s);g=g||s.groups[0];if(!s.achG[g])s.achG[g]=emptyAch();return s.achG[g]}
+function nAch(s,g){var gs=g?[g]:s.groups;return sum(gs,function(x){var a=achOf(s,x);return sum(['b','a','e'],function(k){return a[k].filter(Boolean).length})})}
+function levelOf(s,g){return LEVEL[g]||s.level}
+function pgOf(s){return s.groups.indexOf(S.dep.pg)>=0?S.dep.pg:(s.groups.indexOf(S.dep.g)>=0?S.dep.g:s.groups[0])}
+function teamPill(s,g){var o=s.groups.filter(function(x){return x!==g}).concat(s.ext||[]);if(!o.length)return '';return ' <span class="pill warn" title="Misma estudiante en más de un equipo">'+(g?'También en ':'En ')+(g?o.join(', '):(s.groups.length+(s.ext||[]).length)+' equipos: '+s.groups.concat(s.ext||[]).join(', '))+'</span>'}
+
 function toast(t){var e=$('#toast');e.innerHTML='<div class="toast">'+esc(t)+'</div>';clearTimeout(toast.t);toast.t=setTimeout(function(){e.innerHTML=''},3600)}
 function stu(id){return students.filter(function(x){return x.id===+id})[0]}
 /* quién registra: se escribe en cada movimiento */
@@ -487,17 +493,21 @@ function insAge(f){if(!f)return 8;var b=new Date(f),n=new Date(TODAY),a=n.getFul
 function insApply(rec){
   if(appliedIns[rec.id]||rec.status!=='Recibida'||!rec.data)return;appliedIns[rec.id]=1;
   var d=rec.data,name=(d.nombres+' '+d.apellidos).trim();
+  var ex=students.filter(function(x){return x.doc&&x.doc===rec.doc&&!x.out})[0],gsel=function(g){return GROUPS.indexOf(g)>=0?g:''};
   if(d.unidad==='escuela'){
-    var grp=GROUPS.indexOf(d.grupo)>=0?d.grupo:'Fundamentación';
-    students.push({id:++nextId,name:name,gender:d.sexo==='Masculino'?'Masculino':'Femenino',groups:[grp],level:LEVEL[grp],age:insAge(d.fechaNac),plan:d.plan||'8',months:0,paid:false,info:null,owes:[],adv:[],out:null,ach:emptyAch(),last:0,insc:rec.id,
-      log:[{date:(rec.sentAt||TODAY).slice(0,10),text:'Inscripción hecha por el acudiente'+(GROUPS.indexOf(d.grupo)>=0?'':'. Grupo por asignar por la entrenadora'),who:d.acudiente,media:null}]});
-  }else if(d.modalidad==='convenio'){
+    var grp=gsel(d.grupo)||'Fundamentación',noG=!gsel(d.grupo),gyms=insLoad().filter(function(x){return x.doc===rec.doc&&x.id!==rec.id&&x.status==='Recibida'&&x.data&&x.data.unidad==='gym'}).map(function(x){return x.data.modalidad==='wildcats'?'Wildcats':(x.data.modalidad==='convenio'?x.data.entidad:'Ingreso o liga')});
+    if(ex){ensureAch(ex);if(ex.groups.indexOf(grp)<0){ex.groups.push(grp);ex.achG[grp]=emptyAch();ex.log.push({date:(rec.sentAt||TODAY).slice(0,10),text:'Segunda inscripción: ingresó también al equipo '+grp,who:d.acudiente,media:null})}ex.insc2=rec.id}
+    else{students.push(ex={id:++nextId,doc:rec.doc,name:name,gender:d.sexo==='Masculino'?'Masculino':'Femenino',groups:[grp],level:LEVEL[grp],age:insAge(d.fechaNac),plan:d.plan||'8',months:0,paid:false,info:null,owes:[],adv:[],out:null,ach:emptyAch(),last:0,insc:rec.id,ext:gyms,
+      log:[{date:(rec.sentAt||TODAY).slice(0,10),text:'Inscripción hecha por el acudiente'+(noG?'. Grupo por asignar por la entrenadora':''),who:d.acudiente,media:null}]})}
+    var g2=gsel(d.grupo2);if(g2&&ex.groups.indexOf(g2)<0){ensureAch(ex);ex.groups.push(g2);ex.achG[g2]=emptyAch();ex.log.push({date:(rec.sentAt||TODAY).slice(0,10),text:'Inscrita también al equipo '+g2,who:d.acudiente,media:null})}
+  }else{var lab=d.modalidad==='wildcats'?'Wildcats':(d.modalidad==='convenio'?d.entidad:'Ingreso o liga');if(ex){ex.ext=(ex.ext||[]);if(ex.ext.indexOf(lab)<0)ex.ext.push(lab)}
+   if(d.modalidad==='convenio'){
     if(CR[d.entidad])CR[d.entidad].push({id:++crid,name:name,insc:rec.id});
   }else if(d.modalidad==='wildcats'){
     wc.push({id:++wcid,name:name,mode:d.modoPago||'dia',ride:d.transporte==='Ruta',att:{},pm:{},insc:rec.id});
   }else{
     LIG.push({id:rec.id,name:name,ent:d.entidad,tipo:d.tipoIngreso,date:(rec.sentAt||TODAY).slice(0,10)});
-  }
+  }}
 }
 function insApplyAll(){insLoad().forEach(insApply)}
 function insDest(rec){
@@ -509,7 +519,7 @@ function insDest(rec){
 }
 var INS_LABEL={nombres:'Nombres',apellidos:'Apellidos',tipoDoc:'Tipo de documento',fechaNac:'Fecha de nacimiento',sexo:'Sexo',colegio:'Colegio',eps:'EPS',sangre:'Tipo de sangre',alergias:'Alergias o condiciones',
  acudiente:'Nombre del acudiente',parentesco:'Parentesco',celular:'Celular o WhatsApp',correo:'Correo',direccion:'Dirección o barrio',emNombre:'Contacto de emergencia',emTel:'Teléfono de emergencia',
- plan:'Plan de clases',grupo:'Grupo',talla:'Talla de uniforme',experiencia:'Experiencia previa',horario:'Horario de preferencia',modalidad:'Modalidad',entidad:'Entidad',modoPago:'Modalidad de pago',transporte:'Transporte',tipoIngreso:'Tipo de ingreso',
+ plan:'Plan de clases',grupo:'Grupo',grupo2:'Segundo equipo',talla:'Talla de uniforme',experiencia:'Experiencia previa',horario:'Horario de preferencia',modalidad:'Modalidad',entidad:'Entidad',modoPago:'Modalidad de pago',transporte:'Transporte',tipoIngreso:'Tipo de ingreso',
  autDatos:'Autoriza tratamiento de datos',autImagen:'Autoriza uso de imagen',autReglamento:'Acepta reglamento'};
 function insLink(){return location.href.split('#')[0].split('?')[0]+'?inscripcion=1'}
 
@@ -565,7 +575,7 @@ function portalRender(){
     h+='<h1>Inscripción</h1><p class="pt-sub">Llena los datos de la estudiante y del acudiente. Los campos con * son obligatorios.</p><form id="ptform" class="pt-card" novalidate>'+
       '<h2>Unidad</h2><div class="pg">'+pf('unidad','¿En cuál unidad se inscribe?','select',{req:1,opts:[['','Elige una opción'],['escuela','Dynamic Old Star (escuela)'],['gym','Dynamic GYM (centro de entrenamiento)']]})+'</div>';
     if(un==='escuela')h+='<h2>Datos de Dynamic Old Star</h2><div class="pg">'+pf('plan','Plan de clases','select',{req:1,opts:Object.keys(PLAN).map(function(k){return [k,PLAN[k]+' · '+fmt(PRICE[k])+' al mes']})})+
-      pf('grupo','Grupo','select',{opts:[['Por definir','Por definir (lo asigna la entrenadora)']].concat(GROUPS)})+pf('talla','Talla de uniforme','select',{opts:TALLAS})+
+      pf('grupo','Grupo','select',{opts:[['Por definir','Por definir (lo asigna la entrenadora)']].concat(GROUPS)})+pf('grupo2','Segundo equipo (si participa en otro)','select',{opts:[['','Ninguno']].concat(GROUPS)})+pf('talla','Talla de uniforme','select',{opts:TALLAS})+
       pf('experiencia','Experiencia previa','select',{opts:['Ninguna','Menos de 1 año','De 1 a 3 años','Más de 3 años']})+pf('horario','Horario de preferencia','text',{ph:'Ej.: sábados en la mañana'})+'</div>';
     if(un==='gym'){h+='<h2>Datos de Dynamic GYM</h2><div class="pg">'+pf('modalidad','Modalidad','select',{req:1,opts:[['convenio','Convenio con una escuela o colegio'],['wildcats','Wildcats'],['liga','Ingreso al gimnasio o liga']]});
       if(mo==='convenio')h+=pf('entidad','Convenio','select',{req:1,opts:Object.keys(CR)});
@@ -596,7 +606,7 @@ function portalInit(){document.body.classList.add('portal');portalRender();
 function portalLogin(){
   if(Date.now()<P.lock){P.err='Demasiados intentos. Espera unos minutos e inténtalo de nuevo.';portalRender();return}
   var u=$('#pl-u').value.replace(/\D/g,''),p=$('#pl-p').value.trim().toUpperCase();
-  var rec=insLoad().filter(function(x){return x.ced===u&&String(x.doc).toUpperCase()===p})[0];
+  var rec=insLoad().filter(function(x){return x.ced===u&&String(x.doc).toUpperCase()===p}).sort(function(a,b){return (a.status==='Recibida')-(b.status==='Recibida')})[0];
   if(!u||!p||!rec){P.fails++;if(P.fails>=5){P.lock=Date.now()+5*60000;P.fails=0}P.err='Los datos no coinciden. Revisa la cédula del acudiente y el documento de la estudiante.';portalRender();return}
   P.err='';P.fails=0;P.rec=rec;P.vals={};P.stage=rec.status==='Recibida'?'done':'form';portalRender();window.scrollTo(0,0)}
 function portalSend(){
@@ -608,7 +618,7 @@ function portalSend(){
   var L=insLoad(),rec=L.filter(function(x){return x.id===P.rec.id})[0];if(!rec){P.err='Tu acceso ya no está activo. Pide uno nuevo a la academia.';portalRender();return}
   var d={unidad:v.unidad,nombres:v.nombres.trim(),apellidos:v.apellidos.trim(),tipoDoc:v.tipoDoc||'Tarjeta de identidad',fechaNac:v.fechaNac,sexo:v.sexo||'Femenino',colegio:v.colegio||'',eps:v.eps||'',sangre:v.sangre||'',alergias:v.alergias||'',
     acudiente:v.acudiente.trim(),parentesco:v.parentesco||'Madre',celular:v.celular.trim(),correo:v.correo||'',direccion:v.direccion||'',emNombre:v.emNombre||'',emTel:v.emTel||'',autDatos:true,autImagen:!!v.autImagen,autReglamento:true};
-  if(v.unidad==='escuela'){d.plan=v.plan||'12';d.grupo=v.grupo||'Por definir';d.talla=v.talla||'';d.experiencia=v.experiencia||'';d.horario=v.horario||''}
+  if(v.unidad==='escuela'){d.plan=v.plan||'12';d.grupo=v.grupo||'Por definir';d.grupo2=v.grupo2||'';d.talla=v.talla||'';d.experiencia=v.experiencia||'';d.horario=v.horario||''}
   else{d.modalidad=v.modalidad||'convenio';if(d.modalidad==='convenio'){d.entidad=v.entidad}if(d.modalidad==='wildcats'){d.modoPago=v.modoPago||'dia';d.transporte=v.transporte||'Ruta'}if(d.modalidad==='liga'){d.entidad=v.entidad;d.tipoIngreso=v.tipoIngreso||ING[0][1]}}
   rec.data=d;rec.status='Recibida';rec.sentAt=new Date().toISOString();
   if(!insSave(L)){P.err='No se pudo guardar en este dispositivo. Inténtalo de nuevo.';portalRender();return}
@@ -807,7 +817,7 @@ function vCrm(){
    '<div class="tw"><table><thead><tr><th>Alumno</th><th>Género</th><th>Grupos</th><th>Fecha de retiro</th><th class="r">Meses que estuvo</th><th>Motivo</th><th>Registró</th><th></th></tr></thead><tbody>'+
    (rows.length?rows.map(function(s){return '<tr><td>'+s.name+'</td><td>'+s.gender+'</td><td>'+s.groups.join(', ')+'</td><td>'+dl(s.out.date)+'</td><td class="r">'+s.out.months+'</td><td>'+s.out.motivo+'</td><td>'+s.out.who+'</td><td><button class="btn sm ghost" data-act="react" data-id="'+s.id+'">Reactivar</button></td></tr>'}).join(''):'<tr><td colspan="8" class="empty">No hay alumnos retirados.</td></tr>')+'</tbody></table></div>':
    '<div class="tw"><table><thead><tr><th>Alumno</th><th>Documento</th><th>Género</th><th>Grupos</th><th>Nivel</th><th class="r">Edad</th><th class="r">Meses en la escuela</th><th>Plan</th><th>Acudientes</th><th></th></tr></thead><tbody>'+
-   rows.map(function(s){return '<tr><td>'+s.name+'</td><td>EJ-'+pad(s.id,4)+'</td><td>'+s.gender+'</td><td>'+s.groups.join(', ')+'</td><td>'+s.level+'</td><td class="r">'+s.age+'</td><td class="r">'+s.months+'</td><td>'+PLAN[s.plan]+'</td><td><span class="pill n">Por actualizar</span></td><td><button class="btn sm ghost" data-act="retire" data-id="'+s.id+'">Retirar</button></td></tr>'}).join('')+'</tbody></table></div>';
+   rows.map(function(s){return '<tr><td>'+s.name+teamPill(s)+'</td><td>'+(s.doc?esc(s.doc):'EJ-'+pad(s.id,4))+'</td><td>'+s.gender+'</td><td>'+s.groups.join(', ')+'</td><td>'+s.groups.map(function(g){return levelOf(s,g)}).join(' / ')+'</td><td class="r">'+s.age+'</td><td class="r">'+s.months+'</td><td>'+PLAN[s.plan]+'</td><td><span class="pill n">Por actualizar</span></td><td><button class="btn sm ghost" data-act="retire" data-id="'+s.id+'">Retirar</button></td></tr>'}).join('')+'</tbody></table></div>';
   return (S.showOut?'':addCard)+'<div class="card"><h3>'+(S.showOut?'Alumnos retirados':'Base de datos de alumnos')+'</h3><p class="sub">'+(S.showOut?'El historial sirve para medir cuánto permanece un alumno y por qué se va.':'Un solo registro por niño. El documento es el identificador. Pendiente: acudientes, EPS y tallas.')+'</p>'+
    '<div class="filters"><label class="f">Grupo<select data-bind="fg2">'+gOpts()+'</select></label><label class="f">Género<select data-bind="fgen2">'+genOpts()+'</select></label>'+
    '<label style="display:flex;gap:6px;align-items:center;padding-bottom:7px"><input type="checkbox" data-bind="showout"'+(S.showOut?' checked':'')+'>Ver retirados</label><button class="btn ghost" disabled>Descargar en Excel</button></div>'+
@@ -941,21 +951,31 @@ function vDeporte(){return S.dep.sid?vPerfil(stu(S.dep.sid)):vDepLista()}
 function vDepLista(){
   var g=S.dep.g,rows=act().filter(function(s){return s.groups.indexOf(g)>=0});
   var stuck=rows.filter(function(s){return s.last>45});
-  var avg=Math.round(sum(rows,function(s){return nAch(s)/18*100})/Math.max(1,rows.length));
+  var avg=Math.round(sum(rows,function(s){return nAch(s,g)/18*100})/Math.max(1,rows.length)),dup=rows.filter(function(s){return s.groups.length>1||(s.ext&&s.ext.length)});
   var bar=function(v,t){return '<div style="display:flex;gap:8px;align-items:center"><div class="bar" style="width:80px"><i style="width:'+v/t*100+'%"></i></div><span class="note">'+v+'/'+t+'</span></div>'};
   return banner('deporte','Rendimiento deportivo','',null,'3')+'<p class="sub" style="margin:0 0 12px">Seguimiento uno a uno. Abre a cada niño para ver su nivel, sus insignias y subir fotos o videos de su proceso. <span class="pill warn">Insignias de ejemplo, el catálogo lo define la dueña</span></p>'+
   '<div class="filters"><label class="f">Grupo<select data-bind="dg">'+GROUPS.map(function(x){return '<option'+(g===x?' selected':'')+'>'+x+'</option>'}).join('')+'</select></label></div>'+
-  '<div class="grid kpis">'+kpi('n','Niños en el grupo',rows.length,g)+kpi('n','Avance promedio',avg+'%','Insignias logradas sobre el total')+kpi('n','Sin logro hace más de 45 días',stuck.length,stuck.length?'Revisar con el entrenador':'Ninguno')+'</div>'+
+  '<div class="grid kpis">'+kpi('n','Niños en el grupo',rows.length,g)+kpi('n','Avance promedio',avg+'%','Insignias logradas sobre el total')+kpi('n','Sin logro hace más de 45 días',stuck.length,stuck.length?'Revisar con el entrenador':'Ninguno')+kpi('n','También en otro equipo',dup.length,dup.length?'Sus insignias se llevan por equipo':'Ninguno')+'</div>'+
   '<div class="card"><h3>Niños del grupo '+g+'</h3><div class="tw"><table><thead><tr><th>Alumno</th><th>Género</th><th>Nivel</th><th class="r">Edad</th><th>Básicas</th><th>Avanzadas</th><th>Élites</th><th>Último logro</th><th></th></tr></thead><tbody>'+
-  rows.map(function(s){var c=function(k){return s.ach[k].filter(Boolean).length};return '<tr><td>'+s.name+'</td><td>'+s.gender+'</td><td>'+s.level+'</td><td class="r">'+s.age+'</td><td>'+bar(c('b'),8)+'</td><td>'+bar(c('a'),6)+'</td><td>'+bar(c('e'),4)+'</td><td><span class="pill '+(s.last>45?'bad':'ok')+'">hace '+s.last+' días</span></td><td><button class="btn sm" data-act="open" data-id="'+s.id+'">Abrir</button></td></tr>'}).join('')+'</tbody></table></div></div>';
+  rows.map(function(s){var c=function(k){return achOf(s,g)[k].filter(Boolean).length};return '<tr><td>'+s.name+teamPill(s,g)+'</td><td>'+s.gender+'</td><td>'+levelOf(s,g)+'</td><td class="r">'+s.age+'</td><td>'+bar(c('b'),8)+'</td><td>'+bar(c('a'),6)+'</td><td>'+bar(c('e'),4)+'</td><td><span class="pill '+(s.last>45?'bad':'ok')+'">hace '+s.last+' días</span></td><td><button class="btn sm" data-act="open" data-id="'+s.id+'">Abrir</button></td></tr>'}).join('')+'</tbody></table></div></div>';
 }
 function mediaHtml(m){if(!m)return '';return m.type.indexOf('video')===0?'<video controls src="'+m.src+'"></video>':'<img alt="'+esc(m.name)+'" src="'+m.src+'">'}
+function teamCard(s,pg){
+  var multi=s.groups.length>1||(s.ext&&s.ext.length),free=GROUPS.filter(function(g){return s.groups.indexOf(g)<0});
+  var h='<div class="card"><h3>'+(multi?'Está en más de un equipo':'Equipo')+'</h3>';
+  if(multi)h+='<p class="sub"><b>'+esc(s.name)+'</b> es una sola estudiante, pero participa en '+s.groups.concat(s.ext||[]).join(', ')+'. En cada equipo del colegio o de la escuela lleva su propio nivel y sus propias insignias.</p>';
+  else h+='<p class="sub">Si participa en otro equipo, agrégalo aquí. Cada equipo lleva su nivel y sus insignias por separado.</p>';
+  h+='<div class="seg" style="margin-bottom:12px">'+s.groups.map(function(g){return '<button data-act="pteam" data-g="'+g+'" aria-pressed="'+(g===pg)+'">'+g+' · nivel '+levelOf(s,g)+' · '+nAch(s,g)+' insignias</button>'}).join('')+'</div>';
+  h+='<div class="row">'+whoField('w-team')+(free.length?'<label class="f">Agregar a otro equipo<select id="t-new">'+free.map(function(g){return '<option>'+g+'</option>'}).join('')+'</select></label><button class="btn sm" data-act="teamadd">Agregar equipo</button>':'')+
+    (s.groups.length>1?'<button class="btn sm ghost" data-act="teamdel" data-g="'+pg+'">Quitar del equipo '+pg+'</button>':'')+'</div></div>';
+  return h}
 function vPerfil(s){
-  var n=nAch(s),pv=S.dep.pending;
-  return '<div class="head"><div><button class="btn ghost sm" data-act="back">← Volver al grupo</button><h1 style="margin-top:10px">'+esc(s.name)+'</h1><p><span class="pill n">'+s.gender+'</span> <span class="pill n">'+s.age+' años</span> <span class="pill e">Nivel '+s.level+'</span> '+s.groups.map(function(g){return '<span class="pill i">'+g+'</span>'}).join(' ')+'</p></div></div>'+
-  '<div class="grid kpis">'+kpi('n','Insignias logradas',n+' de 18','Básicas, avanzadas y élites')+kpi('n','Avance',Math.round(n/18*100)+'%','Sobre el catálogo de ejemplo')+kpi('n','Último logro','hace '+s.last+' días',s.last>45?'Conviene revisar su entrenamiento':'Va con buen ritmo')+'</div>'+
-  '<div class="card"><h3>Insignias</h3><p class="sub">Escribe tu nombre y marca cada insignia cuando el niño la logre. Más adelante esto avisará al acudiente y al canal de WhatsApp.</p><div class="filters">'+whoField('w-ach')+'</div>'+
-  ['b','a','e'].map(function(k){return '<h3 style="margin:12px 0 8px;font-size:14px">'+CATN[k]+' · '+s.ach[k].filter(Boolean).length+' de '+CAT[k].length+'</h3><div class="ach">'+CAT[k].map(function(name,i){return '<label class="'+(s.ach[k][i]?'on':'')+'"><input type="checkbox" data-bind="ach" data-k="'+k+'" data-i="'+i+'"'+(s.ach[k][i]?' checked':'')+'>'+name+'</label>'}).join('')+'</div>'}).join('')+'</div>'+
+  var pg=pgOf(s),a=achOf(s,pg),n=nAch(s,pg),pv=S.dep.pending,multi=s.groups.length>1||(s.ext&&s.ext.length);
+  return '<div class="head"><div><button class="btn ghost sm" data-act="back">← Volver al grupo</button><h1 style="margin-top:10px">'+esc(s.name)+'</h1><p><span class="pill n">'+s.gender+'</span> <span class="pill n">'+s.age+' años</span> <span class="pill e">Nivel '+levelOf(s,pg)+'</span> '+s.groups.map(function(g){return '<span class="pill i">'+g+'</span>'}).join(' ')+(s.ext||[]).map(function(g){return ' <span class="pill g">'+esc(g)+'</span>'}).join('')+'</p></div></div>'+
+  teamCard(s,pg)+
+  '<div class="grid kpis">'+kpi('n','Insignias en '+pg,n+' de 18','Básicas, avanzadas y élites')+kpi('n','Avance',Math.round(n/18*100)+'%','Sobre el catálogo de ejemplo')+kpi('n','Último logro','hace '+s.last+' días',s.last>45?'Conviene revisar su entrenamiento':'Va con buen ritmo')+'</div>'+
+  '<div class="card"><h3>Insignias del equipo '+pg+'</h3><p class="sub">Escribe tu nombre y marca cada insignia cuando el niño la logre. Más adelante esto avisará al acudiente y al canal de WhatsApp.</p><div class="filters">'+whoField('w-ach')+'</div>'+
+  ['b','a','e'].map(function(k){return '<h3 style="margin:12px 0 8px;font-size:14px">'+CATN[k]+' · '+a[k].filter(Boolean).length+' de '+CAT[k].length+'</h3><div class="ach">'+CAT[k].map(function(name,i){return '<label class="'+(a[k][i]?'on':'')+'"><input type="checkbox" data-bind="ach" data-k="'+k+'" data-i="'+i+'"'+(a[k][i]?' checked':'')+'>'+name+'</label>'}).join('')+'</div>'}).join('')+'</div>'+
   '<div class="card"><h3>Registrar seguimiento</h3><p class="sub">Escribe qué pasó en el entrenamiento y adjunta una foto o un video del avance.</p><div class="row">'+whoField('w-log')+
   '<label class="f" style="flex:1;min-width:220px">Nota<input id="s-note" placeholder="Por ejemplo: hoy le salió el flic flac con apoyo" style="width:100%"></label>'+
   '<label class="f">Foto o video<input id="s-file" type="file" accept="image/*,video/*" data-bind="file"></label><button class="btn" data-act="savelog">Guardar seguimiento</button></div>'+
@@ -1117,10 +1137,13 @@ document.addEventListener('click',function(e){
     var name=$('#n-name').value.trim();if(!name){toast('Escribe el nombre del alumno.');return}
     var grp=$('#n-grp').value,ns={id:++nextId,name:name,gender:$('#n-gen').value,groups:[grp],level:LEVEL[grp],age:Math.max(3,+$('#n-age').value||8),plan:$('#n-plan').value,months:0,paid:false,info:null,owes:[],adv:[],out:null,ach:emptyAch(),last:0,log:[{date:TODAY,text:'Ingreso al grupo '+grp,who:w11,media:null}]};
     students.push(ns);doneWho('w-stu');render();toast(name+' ingresó al grupo '+grp+'. Registró '+w11+'.');return}
+  if(a==='pteam'){S.dep.pg=t.getAttribute('data-g');render();return}
+  if(a==='teamadd'){var wt=needWho('w-team');if(!wt)return;var st2=stu(S.dep.sid),ng=$('#t-new').value;ensureAch(st2);st2.groups.push(ng);st2.achG[ng]=emptyAch();st2.log.push({date:TODAY,text:'Ingresó también al equipo '+ng,who:wt,media:null});S.dep.pg=ng;doneWho('w-team');render();toast(st2.name+' ahora está en '+st2.groups.join(' y ')+'. Registró '+wt+'.');return}
+  if(a==='teamdel'){var wd=needWho('w-team');if(!wd)return;var st3=stu(S.dep.sid),dg=t.getAttribute('data-g');ensureAch(st3);st3.groups=st3.groups.filter(function(x){return x!==dg});delete st3.achG[dg];st3.ach=achOf(st3,st3.groups[0]);st3.log.push({date:TODAY,text:'Salió del equipo '+dg,who:wd,media:null});S.dep.pg=null;doneWho('w-team');render();toast(st3.name+' salió del equipo '+dg+'. Sus insignias de ese equipo se conservan en el registro.');return}
   if(a==='insnew'){var ic=($('#in-ced').value||'').replace(/\D/g,''),idc=($('#in-doc').value||'').trim();
     if(ic.length<5||ic.length>12){toast('Escribe la cédula del acudiente, solo números.');return}
     if(idc.length<4){toast('Escribe el documento de la estudiante.');return}
-    var IL=insLoad();if(IL.some(function(x){return x.ced===ic&&String(x.doc).toUpperCase()===idc.toUpperCase()})){toast('Ya existe un acceso con esos datos.');return}
+    var IL=insLoad();if(IL.some(function(x){return x.ced===ic&&String(x.doc).toUpperCase()===idc.toUpperCase()&&x.status!=='Recibida'})){toast('Ya hay un acceso pendiente con esos datos.');return}
     var nr={id:'i'+Date.now().toString(36),ced:ic,doc:idc,acu:$('#in-acu').value.trim(),est:$('#in-est').value.trim(),status:'Pendiente',created:TODAY};IL.push(nr);insSave(IL);S.ins.nuevo=nr;render();toast('Acceso creado. Copia el enlace y envíalo.');return}
   if(a==='inscopy'){var el=$('#in-link');el.select();try{navigator.clipboard.writeText(el.value).then(function(){toast('Enlace copiado')},function(){document.execCommand('copy');toast('Enlace copiado')})}catch(x){try{document.execCommand('copy');toast('Enlace copiado')}catch(y){toast('Selecciona el enlace y cópialo')}}return}
   if(a==='insver'){S.ins.sel=t.getAttribute('data-sid');render();return}
@@ -1168,8 +1191,8 @@ document.addEventListener('change',function(e){
   if(b==='wcm'||b==='wcr'||b==='wca'){var o=wc.filter(function(x){return x.id===+t.getAttribute('data-id')})[0];
     if(b==='wcm')o.mode=t.value;else if(b==='wcr')o.ride=t.value==='1';else o.att[t.getAttribute('data-d')]=t.value;render();return}
   if(b==='ach'){var wa=needWho('w-ach');if(!wa){render();return}
-    var s=stu(S.dep.sid),k=t.getAttribute('data-k'),i=+t.getAttribute('data-i');s.ach[k][i]=t.checked;
-    if(t.checked){s.last=0;s.log.push({date:TODAY,text:'Insignia desbloqueada: '+CAT[k][i]+' ('+CATN[k]+')',who:wa,media:null});toast('Insignia registrada por '+wa+'. En la versión final se avisa al acudiente y al canal de WhatsApp.')}
+    var s=stu(S.dep.sid),k=t.getAttribute('data-k'),i=+t.getAttribute('data-i'),pgx=pgOf(s);achOf(s,pgx)[k][i]=t.checked;
+    if(t.checked){s.last=0;s.log.push({date:TODAY,text:'Insignia desbloqueada en '+pgx+': '+CAT[k][i]+' ('+CATN[k]+')',who:wa,media:null});toast('Insignia registrada por '+wa+'. En la versión final se avisa al acudiente y al canal de WhatsApp.')}
     render();return}
   if(b==='file'){var f=t.files&&t.files[0];if(!f)return;
     if(f.size>20*1024*1024){toast('El archivo pesa más de 20 MB. Elige uno más liviano.');t.value='';return}
