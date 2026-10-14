@@ -413,7 +413,7 @@ var champs=[
  {id:'c2',name:'Invitacional de campeones',city:'Barranquilla',date:'',fee:200000,trip:900000,compTrip:600000,compPer:3,groups:['Queens','Black'],extra:[],out:[],pay:{}}];
 function seedPays(c,pf,pp){students.filter(function(s){return s.groups.some(function(g){return c.groups.indexOf(g)>=0})}).forEach(function(s){
   var tot=c.fee+c.trip,r=rnd(),a=r<pf?tot:(r<pf+pp?Math.round(tot*.5/10000)*10000:0);
-  c.pay[s.id]={amount:a,channel:pick(CH),seed:a}})}
+  var ch0=pick(CH);c.pay[s.id]={amount:a,channel:ch0,seed:a,list:a>0?[{id:'s'+s.id,date:TODAY,amount:a,channel:ch0,who:'Registro inicial',seed:true}]:[]}})}
 seedPays(champs[0],.4,.25);seedPays(champs[1],.8,.15);
 /* alumnos retirados (ejemplo) */
 [['Gabriela R.','Femenino','Pink',10,'12',14,'2026-08-29','Económico'],['Thiago M.','Masculino','Green',11,'8',6,'2026-09-12','Cambio de ciudad'],
@@ -433,6 +433,7 @@ var CONV=[
  ['Wildcats','Equipo del Colegio Superior Americano','','Fechas que define la entrenadora','Por persona, solo por QR · $11.500 con ruta, $9.000 desde casa'],
  ['Lúdicas de gimnasia','Colegio Superior Americano','25 niños fijos (lista del colegio)','Viernes en la mañana','En bloque al cierre del semestre'],
  ['Grupo de gimnasia (tarde)','Profe externo','Variable cada día','Tardes','Por grupo, pago semanal · 1 h $6.000, 2 h $10.000, 3 h $15.000']];
+var UO=[];
 var unif=[
  {n:'Uniforme de competencia',ped:34,rec:2380000,ent:2380000},{n:'Uniforme de entrenamiento',ped:22,rec:1320000,ent:900000},
  {n:'Uniforme de presentación',ped:18,rec:1170000,ent:0},{n:'Tenis',ped:9,rec:1080000,ent:1080000},{n:'Moños',ped:40,rec:400000,ent:400000}];
@@ -459,7 +460,7 @@ var wc=FN.slice(0,12).map(function(n,i){
 
 /* ---------- estado de interfaz ---------- */
 var S={view:'resumen',sub:{escuela:'mens',gym:'caf'},caf:'prod',f:{g:'Todos',st:'Todos',q:'',gen:'Todos'},champ:'c1',
-  pos:{ch:'Efectivo',cl:'',q:1,p:null},wcM:'2026-10',im:'2026-10',wcCh:'Nequi',showOut:false,multi:false,convSel:'Spartan',who:{},
+  pos:{ch:'Efectivo',cl:'',q:1,p:null,cart:[]},wcM:'2026-10',im:'2026-10',wcCh:'Nequi',showOut:false,multi:false,campSt:null,uoav:null,uof:{art:'0',vu:'',date:'',q:1,g:'Todos'},uos:{},uopick:null,convSel:'Spartan',who:{},
   caja:{u:'Todas'},dep:{g:'Pink',sid:null,pending:null},modal:null,ingf:{}};
 
 /* ---------- cálculos ---------- */
@@ -800,27 +801,66 @@ function vCamp(){
     (S.champDel===c.id?'<div class="hint" style="margin-top:14px;border-color:var(--bad)"><b>¿Eliminar el campeonato '+esc(c.name)+'?</b> Se borran sus datos, la lista de deportistas y los pagos registrados ('+fmt(sum(Object.keys(c.pay),function(k){return c.pay[k].amount||0}))+'). No se puede deshacer.<div class="row" style="margin-top:10px">'+whoField('w-campdel')+'<button class="btn" style="background:var(--bad);border-color:var(--bad)" data-act="champdelok">Sí, eliminar</button><button class="btn ghost" data-act="champdelno">Cancelar</button></div></div>':'<div style="margin-top:14px"><button class="btn ghost sm" data-act="champdel">Eliminar campeonato</button></div>')+
     '<div class="row" style="margin-top:12px"><label class="f">Agregar un deportista de otro grupo<select id="c-add">'+avail.map(function(s){return '<option value="'+s.id+'">'+s.name+' · '+s.groups.join(', ')+'</option>'}).join('')+'</select></label><button class="btn ghost" data-act="cadd"'+(avail.length?'':' disabled')+'>Agregar al campeonato</button></div></div>';
   h+='<div class="grid kpis">'+kpi('e','Deportistas inscritos',ros.length,'Según los grupos marcados y los ajustes manuales')+kpi('e','Por recaudar',fmt(tot),fmt(per)+' por deportista')+kpi('e','Recaudado',fmt(rec),Math.round(tot?rec/tot*100:0)+'% del total')+kpi('n','Acompañantes estimados',comp,'Costo estimado '+fmt(compTot))+'</div>';
-  h+='<div class="card"><h3>Pagos por deportista</h3><p class="sub">Escribe lo recibido. Admite abonos y pagos totales, por cualquier canal. Para cambiar un valor, escribe antes tu nombre.</p><div class="filters">'+whoField('w-camp')+'</div>'+
-    (ros.length?'<div class="tw keep"><table><thead><tr><th>Deportista</th><th>Género</th><th>Grupos</th><th class="r">Valor</th><th>Recibido</th><th>Canal</th><th>Estado</th><th></th></tr></thead><tbody>'+
-    ros.map(function(s){var p=c.pay[s.id]||{amount:0,channel:'Efectivo'};var st=p.amount>=per?['ok','Pagado']:(p.amount>0?['warn','Abono']:['bad','Pendiente']);
-      return '<tr><td>'+s.name+'</td><td>'+s.gender+'</td><td>'+s.groups.join(', ')+'</td><td class="r">'+fmt(per)+'</td><td><input type="number" step="10000" min="0" style="width:120px" data-bind="cp" data-id="'+s.id+'" value="'+p.amount+'"></td>'+
-      '<td><select data-bind="cc" data-id="'+s.id+'">'+CH.map(function(x){return '<option'+(p.channel===x?' selected':'')+'>'+x+'</option>'}).join('')+'</select></td><td><span class="pill '+st[0]+'">'+st[1]+'</span></td>'+
-      '<td><button class="btn ghost sm" data-act="cdel" data-id="'+s.id+'"'+(p.amount>0?' disabled title="Tiene pagos registrados"':'')+'>Quitar</button></td></tr>'}).join('')+'</tbody></table></div>':'<div class="empty">Marca al menos un grupo o agrega deportistas para verlos aquí.</div>')+
+  var sel=ros.filter(function(s){return s.id===S.campSt})[0];
+  h+='<div class="card"><h3>Pagos por deportista</h3><p class="sub">Cada deportista tiene su propio historial de abonos con fecha. Entra con «Abonar / Ver» para registrar un pago y ver el saldo.</p>'+
+    (ros.length?'<div class="tw keep"><table><thead><tr><th>Deportista</th><th class="r">Valor</th><th class="r">Pagado</th><th class="r">Saldo</th><th>Último pago</th><th>Estado</th><th></th></tr></thead><tbody>'+
+    ros.map(function(s){var p=c.pay[s.id]||{amount:0,list:[]};var l=p.list||[];var pd=sum(l,function(x){return x.amount}),sal=Math.max(0,per-pd);var st=pd>=per&&per>0?['ok','Pagado']:(pd>0?['warn','Abono']:['bad','Pendiente']);
+      var lp=l.length?l.slice().sort(function(a,b){return a.date<b.date?1:-1})[0].date:'';
+      return '<tr'+(S.campSt===s.id?' style="background:var(--surface2,rgba(120,120,120,.08))"':'')+'><td>'+esc(s.name)+' <span class="note">'+s.groups.join(', ')+'</span>'+teamPill(s)+'</td><td class="r">'+fmt(per)+'</td><td class="r">'+fmt(pd)+'</td><td class="r">'+(sal>0?'<b>'+fmt(sal)+'</b>':'—')+'</td><td>'+(lp?dl(lp):'—')+'</td><td><span class="pill '+st[0]+'">'+st[1]+'</span></td>'+
+      '<td><button class="btn sm" data-act="campst" data-id="'+s.id+'">Abonar / Ver</button> <button class="btn ghost sm" data-act="cdel" data-id="'+s.id+'"'+(pd>0?' disabled title="Tiene pagos registrados"':'')+'>Quitar</button></td></tr>'}).join('')+'</tbody></table></div>':'<div class="empty">Marca al menos un grupo o agrega deportistas para verlos aquí.</div>')+
     '<div class="row" style="margin-top:12px"><button class="btn ghost" disabled>Descargar lista en Excel</button><span class="note">El botón de Excel se activa en la versión final. No se puede quitar a quien ya tiene pagos registrados.</span></div></div>';
+  if(sel){var sp=c.pay[sel.id]||{amount:0,list:[]},sl=(sp.list||[]).slice().sort(function(a,b){return a.date<b.date?-1:1}),spd=sum(sl,function(x){return x.amount}),ssal=Math.max(0,per-spd),run=0;
+    h+='<div class="card" id="camp-det"><h3>'+esc(sel.name)+' · '+esc(c.name)+'</h3><p class="sub">'+sel.groups.join(', ')+'</p>'+
+      '<div class="grid kpis">'+kpi('e','Valor a pagar',fmt(per),'Inscripción + viaje')+kpi('e','Pagado',fmt(spd),sl.length+' abono(s)')+kpi(ssal>0?'n':'e','Saldo pendiente',ssal>0?fmt(ssal):'Al día',ssal>0?'Falta por pagar':'Pago completo')+'</div>'+
+      (sl.length?'<div class="tw"><table><thead><tr><th>Fecha</th><th>Canal</th><th class="r">Abono</th><th class="r">Saldo después</th><th>Registró</th><th></th></tr></thead><tbody>'+sl.map(function(x){run+=x.amount;return '<tr><td>'+dl(x.date)+'</td><td>'+esc(x.channel)+'</td><td class="r">'+fmt(x.amount)+'</td><td class="r">'+fmt(Math.max(0,per-run))+'</td><td>'+esc(x.who)+'</td><td><button class="btn ghost sm" data-act="abonodel" data-pid="'+x.id+'">Anular</button></td></tr>'}).join('')+'</tbody></table></div>':'<div class="empty">Aún no hay abonos registrados.</div>')+
+      '<h3 style="margin-top:16px">Registrar un abono</h3><div class="row">'+whoField('w-abono')+'<label class="f">Fecha del pago<input id="ab-d" type="date" value="'+TODAY+'" style="width:150px"></label><label class="f">Valor<input id="ab-v" type="number" min="0" step="1000" placeholder="'+(ssal>0?ssal:'')+'" style="width:130px"></label>'+
+      '<label class="f">Canal<select id="ab-ch">'+CH.map(function(x){return '<option>'+x+'</option>'}).join('')+'</select></label><button class="btn" data-act="abono">Registrar abono</button><button class="btn ghost" data-act="campstx">Cerrar</button></div></div>'}
   return h;
 }
+function uoPaid(l){return sum(l.list||[],function(x){return x.amount})}
+function uoForm(){
+  var F=S.uof;if(!F.date)F.date=TODAY;
+  var vis=act().filter(function(s){return F.g==='Todos'||s.groups.indexOf(F.g)>=0}).sort(function(a,b){return a.name.localeCompare(b.name,'es')});
+  var n=Object.keys(S.uos).filter(function(k){return S.uos[k]}).length;
+  return '<div class="card"><h3>Registrar un pedido de uniforme</h3><p class="sub">Elige el artículo y marca las alumnas que lo van a comprar. Cada una queda con su propio seguimiento de pagos, abonos y saldo.</p><div class="row">'+
+   '<label class="f">Artículo<select data-bind="uof" data-k="art">'+unif.map(function(u,i){return '<option value="'+i+'"'+(String(F.art)===String(i)?' selected':'')+'>'+esc(u.n)+'</option>'}).join('')+'</select></label>'+
+   '<label class="f">Valor por unidad<input data-bind="uof" data-k="vu" type="number" min="0" value="'+esc(F.vu)+'" style="width:130px"></label>'+
+   '<label class="f">Cantidad por alumna<input data-bind="uof" data-k="q" type="number" min="1" value="'+esc(F.q)+'" style="width:90px"></label>'+
+   '<label class="f">Fecha del pedido<input data-bind="uof" data-k="date" type="date" value="'+esc(F.date)+'" style="width:150px"></label></div>'+
+   '<div class="row" style="margin-top:10px"><label class="f">Filtrar alumnas por grupo<select data-bind="uofg"><option>Todos</option>'+GROUPS.map(function(g){return '<option'+(F.g===g?' selected':'')+'>'+g+'</option>'}).join('')+'</select></label><button class="btn ghost sm" data-act="uoall">Marcar las visibles</button><button class="btn ghost sm" data-act="uonone">Quitar marcas</button><span class="note">'+n+' alumna(s) marcada(s)</span></div>'+
+   '<div class="checks" style="max-height:230px;overflow:auto;margin-top:10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px 12px">'+vis.map(function(s){return '<label><input type="checkbox" data-bind="uochk" data-sid="'+s.id+'"'+(S.uos[s.id]?' checked':'')+'>'+esc(s.name)+' <span class="note">'+s.groups.join(', ')+'</span></label>'}).join('')+'</div>'+
+   '<div class="row" style="margin-top:12px"><button class="btn" data-act="uoadd">Registrar pedido</button></div></div>'
+}
+function uoList(){
+  if(!UO.length)return '<div class="card"><h3>Pedidos registrados</h3><div class="empty">Aún no hay pedidos. Registra el primero arriba y aquí aparece la lista de alumnas con su saldo.</div></div>';
+  var h='';
+  var act0=UO.filter(function(o){return !o.arch});
+  act0.slice().reverse().forEach(function(o){
+    var u=unif[o.art],tot=sum(o.lines,function(l){return l.q*o.vu}),pd=sum(o.lines,uoPaid);
+    h+='<div class="card"><h3>'+esc(u.n)+' · pedido del '+dl(o.date)+'</h3><p class="sub">'+o.lines.length+' alumna(s) · '+fmt(o.vu)+' por unidad · Total '+fmt(tot)+' · Pagado '+fmt(pd)+' · Saldo '+fmt(tot-pd)+'</p>'+
+     (pd>=tot&&tot>0?'<div class="hint" style="margin-bottom:12px;border-color:var(--ok,#2a9d6a)"><b>Nota para la dueña: todas las alumnas pagaron este pedido.</b> Puedes archivarlo para cerrarlo. Queda guardado en «Pedidos archivados» para consultar en el futuro cuánto se recaudó y cuánto costó.<div class="row" style="margin-top:10px">'+whoField('w-arch-'+o.id)+'<label class="f">Costo pagado al proveedor por este pedido<input id="ar-c-'+o.id+'" type="number" min="0" step="1000" placeholder="Opcional" style="width:190px"></label><label class="f">Nota<input id="ar-n-'+o.id+'" placeholder="Opcional" style="width:200px"></label><button class="btn" data-act="uoarch" data-o="'+o.id+'">Archivar pedido</button></div></div>':'')+
+     '<div class="tw keep"><table><thead><tr><th>Alumna</th><th class="r">Cant.</th><th class="r">Valor</th><th class="r">Pagado</th><th class="r">Saldo</th><th>Último pago</th><th>Estado</th><th></th></tr></thead><tbody>'+
+     o.lines.map(function(l){var s=stu(l.sid),v=l.q*o.vu,p=uoPaid(l),sa=v-p,lp=(l.list||[]).length?l.list.slice().sort(function(a,b){return a.date<b.date?1:-1})[0].date:'';var st=p>=v?['ok','Pagado']:(p>0?['warn','Abono']:['bad','Pendiente']);
+      return '<tr><td>'+esc(s.name)+' <span class="note">'+s.groups.join(', ')+'</span></td><td class="r">'+l.q+'</td><td class="r">'+fmt(v)+'</td><td class="r">'+fmt(p)+'</td><td class="r">'+(sa>0?'<b>'+fmt(sa)+'</b>':'—')+'</td><td>'+(lp?dl(lp):'—')+'</td><td><span class="pill '+st[0]+'">'+st[1]+'</span></td><td><button class="btn sm" data-act="uopick" data-o="'+o.id+'" data-sid="'+l.sid+'">Abonar / Ver</button></td></tr>'}).join('')+'</tbody></table></div>'+
+     (pd===0?'<div style="margin-top:10px"><button class="btn ghost sm" data-act="uodel" data-o="'+o.id+'">Eliminar pedido</button></div>':'')+'</div>';
+    if(S.uopick&&S.uopick.o===o.id){var l2=o.lines.filter(function(x){return x.sid===S.uopick.sid})[0];if(l2){var s2=stu(l2.sid),v2=l2.q*o.vu,p2=uoPaid(l2),sa2=v2-p2,run=0,ls=(l2.list||[]).slice().sort(function(a,b){return a.date<b.date?-1:1});
+      h+='<div class="card" id="uo-det"><h3>'+esc(s2.name)+' · '+esc(u.n)+'</h3><p class="sub">'+l2.q+' unidad(es) · '+fmt(o.vu)+' c/u</p><div class="grid kpis">'+kpi('e','Valor a pagar',fmt(v2),'Pedido del '+dl(o.date))+kpi('e','Pagado',fmt(p2),ls.length+' abono(s)')+kpi(sa2>0?'n':'e','Saldo pendiente',sa2>0?fmt(sa2):'Al día',sa2>0?'Falta por pagar':'Pago completo')+'</div>'+
+       (ls.length?'<div class="tw"><table><thead><tr><th>Fecha</th><th>Canal</th><th class="r">Abono</th><th class="r">Saldo después</th><th>Registró</th><th></th></tr></thead><tbody>'+ls.map(function(x){run+=x.amount;return '<tr><td>'+dl(x.date)+'</td><td>'+esc(x.channel)+'</td><td class="r">'+fmt(x.amount)+'</td><td class="r">'+fmt(Math.max(0,v2-run))+'</td><td>'+esc(x.who)+'</td><td><button class="btn ghost sm" data-act="uoabonodel" data-pid="'+x.id+'">Anular</button></td></tr>'}).join('')+'</tbody></table></div>':'<div class="empty">Aún no hay abonos registrados.</div>')+
+       '<h3 style="margin-top:16px">Registrar un abono</h3><div class="row">'+whoField('w-uoab')+'<label class="f">Fecha del pago<input id="uab-d" type="date" value="'+TODAY+'" style="width:150px"></label><label class="f">Valor<input id="uab-v" type="number" min="0" step="1000" placeholder="'+(sa2>0?sa2:'')+'" style="width:130px"></label><label class="f">Canal<select id="uab-ch">'+CH.map(function(x){return '<option>'+x+'</option>'}).join('')+'</select></label><button class="btn" data-act="uoabono">Registrar abono</button><button class="btn ghost" data-act="uopickx">Cerrar</button></div></div>'}}
+  });
+  return '<h3 style="margin:18px 2px 8px">Pedidos registrados</h3>'+(act0.length?h:'<div class="card"><div class="empty">No hay pedidos abiertos. Todos los pedidos están archivados.</div></div>')+uoArch()
+}
+function uoArch(){
+  var A=UO.filter(function(o){return o.arch});if(!A.length)return '';
+  var h='<h3 style="margin:22px 2px 8px">Pedidos archivados</h3><div class="card"><p class="sub">Pedidos pagados por todas las alumnas y cerrados. Sirven para revisar cuánto se recaudó y cuánto costó cada uno.</p><div class="tw"><table><thead><tr><th>Artículo</th><th>Pedido</th><th>Cerrado</th><th class="r">Alumnas</th><th class="r">Recaudado</th><th class="r">Costo proveedor</th><th class="r">Resultado</th><th>Archivó</th><th></th></tr></thead><tbody>'+
+   A.slice().reverse().map(function(o){var rec=sum(o.lines,uoPaid),c=o.arch.cost;return '<tr><td>'+esc(unif[o.art].n)+'</td><td>'+dl(o.date)+'</td><td>'+dl(o.arch.date)+'</td><td class="r">'+o.lines.length+'</td><td class="r">'+fmt(rec)+'</td><td class="r">'+(c!=null?fmt(c):'—')+'</td><td class="r">'+(c!=null?'<b>'+fmt(rec-c)+'</b>':'—')+'</td><td>'+esc(o.arch.who)+'</td><td><button class="btn ghost sm" data-act="uoarchver" data-o="'+o.id+'">'+(S.uoav===o.id?'Ocultar':'Ver detalle')+'</button></td></tr>'+(S.uoav===o.id?'<tr><td colspan="9" style="background:rgba(120,120,120,.06)">'+(o.arch.note?'<p class="note"><b>Nota:</b> '+esc(o.arch.note)+'</p>':'')+'<div class="tw"><table><thead><tr><th>Alumna</th><th class="r">Cant.</th><th class="r">Valor</th><th>Pagos (fecha · valor)</th></tr></thead><tbody>'+o.lines.map(function(l){return '<tr><td>'+esc(stu(l.sid).name)+'</td><td class="r">'+l.q+'</td><td class="r">'+fmt(l.q*o.vu)+'</td><td>'+(l.list||[]).slice().sort(function(a,b){return a.date<b.date?-1:1}).map(function(x){return dl(x.date)+' · '+fmt(x.amount)}).join(' &nbsp;|&nbsp; ')+'</td></tr>'}).join('')+'</tbody></table></div><div style="margin-top:8px"><button class="btn ghost sm" data-act="uoreopen" data-o="'+o.id+'">Reabrir pedido</button></div></td></tr>':'')}).join('')+'</tbody></table></div></div>';
+  return h
+}
+
 function vUnif(){
   var opt=function(l,f){return l.map(f).join('')},arts=opt(unif,function(u,i){return '<option value="'+i+'">'+esc(u.n)+'</option>'});
-  var hist=M.filter(function(m){return m.cat==='uniforme'}).slice(-8).reverse();
   return '<div class="grid kpis">'+kpi('e','Artículos pedidos',sum(unif,function(u){return u.ped}),'Entre todos los artículos')+kpi('e','Recaudado de las familias',fmt(sum(unif,function(u){return u.rec})),'Entra a caja, no es ingreso propio')+kpi('e','Por entregar al proveedor',fmt(sum(unif,function(u){return Math.max(0,u.rec-u.ent)})),'Dinero de las familias que aún no se paga')+kpi('e','Pendiente de familias',fmt(sum(unif,function(u){return u.pend||0})),'Pedidos con saldo por cobrar')+'</div>'+
-  '<div class="card"><h3>Registrar un pedido de uniforme</h3><p class="sub">Cuando una familia pide uniformes o accesorios nuevos. Registra la cantidad, el valor y lo que ya pagó. Si no pagó todo, el saldo queda como pendiente.</p><div class="row">'+whoField('w-uni')+
-   '<label class="f">Alumna o alumno<select id="u-stu"><option value="">Sin asignar</option>'+opt(act(),function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'})+'</select></label>'+
-   '<label class="f">Artículo<select id="u-art">'+arts+'</select></label>'+
-   '<label class="f">Cantidad<input id="u-q" type="number" min="1" value="1" style="width:80px"></label>'+
-   '<label class="f">Valor por unidad<input id="u-vu" type="number" min="0" step="1000" style="width:120px"></label>'+
-   '<label class="f">Recibido hoy<input id="u-ab" type="number" min="0" step="1000" value="0" style="width:120px"></label>'+
-   '<label class="f">Canal<select id="u-ch">'+opt(CH,function(c){return '<option>'+c+'</option>'})+'</select></label>'+
-   '<button class="btn" data-act="unipedido">Registrar pedido</button></div></div>'+
+  uoForm()+
   '<div class="card"><h3>Uniformes y accesorios</h3><p class="sub">Dinero que la escuela recoge y entrega al proveedor. Cifras de ejemplo.</p><div class="tw"><table><thead><tr><th>Artículo</th><th class="r">Pedidos</th><th class="r">Recaudado</th><th class="r">Pendiente de familias</th><th class="r">Entregado al proveedor</th><th class="r">Por entregar</th></tr></thead><tbody>'+
    unif.map(function(u){var d=u.rec-u.ent;return '<tr><td>'+esc(u.n)+'</td><td class="r">'+u.ped+'</td><td class="r">'+fmt(u.rec)+'</td><td class="r">'+((u.pend||0)?'<span class="pill warn">'+fmt(u.pend)+'</span>':'—')+'</td><td class="r">'+fmt(u.ent)+'</td><td class="r">'+(d>0?'<span class="pill warn">'+fmt(d)+'</span>':'<span class="pill ok">Al día</span>')+'</td></tr>'}).join('')+'</tbody></table></div>'+
    '<p class="note" style="margin-top:10px">Este dinero entra a caja pero no cuenta como ingreso propio de la escuela. Las gorras las gestiona un tercero y no se manejan aquí.</p></div>'+
@@ -828,7 +868,7 @@ function vUnif(){
    '<label class="f">Artículo<select id="up-art">'+arts+'</select></label><label class="f">Valor<input id="up-v" type="number" min="0" step="10000" style="width:130px"></label>'+
    '<label class="f">Sale de<select id="up-ch">'+opt(CH,function(c){return '<option>'+c+'</option>'})+'</select></label><button class="btn" data-act="unipago">Registrar pago</button></div></div>'+
   '<div class="card"><h3>Agregar un artículo nuevo</h3><p class="sub">Para un uniforme o accesorio que aún no está en la lista.</p><div class="row"><label class="f">Nombre del artículo<input id="ua-n" style="width:210px" placeholder="Ej.: Chaqueta del equipo"></label><button class="btn" data-act="uniart">Agregar artículo</button></div></div></div>'+
-  '<div class="card"><h3>Últimos movimientos de uniformes</h3>'+(hist.length?'<div class="tw"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Canal</th><th class="r">Valor</th><th>Registró</th></tr></thead><tbody>'+hist.map(function(m){return '<tr><td>'+dl(m.date)+'</td><td>'+esc(m.concept)+'</td><td>'+m.channel+'</td><td class="r">'+fmt(m.amount)+'</td><td>'+esc(m.who)+'</td></tr>'}).join('')+'</tbody></table></div>':'<div class="empty">Aún no hay movimientos registrados.</div>')+'</div>';
+  uoList();
 }
 function vCrm(){
   var base=S.showOut?students.filter(function(s){return s.out}):act();
@@ -869,7 +909,7 @@ function cafProd(){
    '<label class="f">Avisar al bajar de<input id="p-min" type="number" min="0" value="5" style="width:90px"></label>'+
    '<button class="btn" data-act="addprod">Crear producto</button></div></div>';
 }
-function prodOpts(sel,withStock){return inv.map(function(p){return '<option value="'+p.id+'"'+(+sel===p.id?' selected':'')+'>'+esc(p.name)+' · '+p.cat+(withStock?' · quedan '+p.stock:'')+'</option>'}).join('')}
+function prodOpts(sel,withStock){return inv.map(function(p){return '<option value="'+p.id+'"'+(+sel===p.id?' selected':'')+'>'+esc(p.name)+' · '+fmt(p.price)+(withStock?' · quedan '+p.stock:'')+'</option>'}).join('')}
 function cafEntradas(){
   return '<div class="card"><h3>Entradas de inventario</h3><p class="sub">Producto que llega. Se suma al stock. Si anotas el costo y desde dónde se pagó, queda como gasto de Dynamic GYM en Caja.</p><div class="row">'+
    whoField('w-ent')+
@@ -882,13 +922,20 @@ function cafEntradas(){
    entradas.slice().reverse().map(function(e){return '<tr><td>'+dl(e.date)+'</td><td>'+esc(e.product)+'</td><td>'+e.cat+'</td><td class="r">'+e.qty+'</td><td class="r">'+(e.cost?fmt(e.cost):'—')+'</td><td>'+(e.channel||'—')+'</td><td>'+esc(e.who)+'</td></tr>'}).join('')+'</tbody></table></div></div>';
 }
 function cafSalidas(){
-  var pid=S.pos.p||(inv[0]&&inv[0].id),pr=inv.filter(function(x){return x.id===+pid})[0],tot=pr?pr.price*Math.max(1,Math.floor(+S.pos.q||1)):0;
-  return '<div class="card"><h3>Registrar una salida</h3><p class="sub">Producto, cantidad, medio de pago y quién registra. Si pagó, el valor entra a Caja en el medio elegido. Si queda debiendo, pasa a Cartera con el nombre del cliente.</p><div class="row">'+whoField('w-pos')+
-   '<label class="f">Producto<select data-bind="posp" style="min-width:200px">'+prodOpts(pid,true)+'</select></label>'+
+  var pid=S.pos.p||(inv[0]&&inv[0].id),pr=inv.filter(function(x){return x.id===+pid})[0],q0=Math.max(1,Math.floor(+S.pos.q||1)),cart=S.pos.cart||[];
+  var tot=sum(cart,function(c){var pp=inv.filter(function(x){return x.id===c.p})[0];return pp?pp.price*c.q:0});
+  return '<div class="card"><h3>Registrar una salida</h3><p class="sub">Agrega uno o varios productos al pedido. El total se calcula solo. Al registrar, si pagó el valor entra a Caja en el medio elegido; si queda debiendo, pasa a Cartera con el nombre del cliente.</p><div class="row">'+
+   '<label class="f">Producto<select data-bind="posp" style="min-width:240px">'+prodOpts(pid,true)+'</select></label>'+
+   '<label class="f">Precio unitario<input readonly value="'+(pr?fmt(pr.price):'')+'" style="width:110px;background:rgba(120,120,120,.08)"></label>'+
    '<label class="f">Cantidad<input type="number" min="1" style="width:80px" data-bind="posq" value="'+S.pos.q+'"></label>'+
+   '<label class="f">Subtotal<input readonly value="'+(pr?fmt(pr.price*q0):'')+'" style="width:120px;background:rgba(120,120,120,.08)"></label>'+
+   '<button class="btn ghost" data-act="posadd">Agregar al pedido</button></div>'+
+   '<h3 style="margin-top:18px">Pedido actual</h3>'+
+   (cart.length?'<div class="tw"><table><thead><tr><th>Producto</th><th class="r">Precio</th><th class="r">Cantidad</th><th class="r">Subtotal</th><th></th></tr></thead><tbody>'+cart.map(function(c,i){var pp=inv.filter(function(x){return x.id===c.p})[0];return '<tr><td>'+esc(pp.name)+'</td><td class="r">'+fmt(pp.price)+'</td><td class="r">'+c.q+'</td><td class="r">'+fmt(pp.price*c.q)+'</td><td><button class="btn ghost sm" data-act="posrm" data-id="'+i+'">Quitar</button></td></tr>'}).join('')+'<tr><td colspan="3" class="r"><b>Total del pedido</b></td><td class="r"><b>'+fmt(tot)+'</b></td><td></td></tr></tbody></table></div>':'<div class="empty">Aún no hay productos en el pedido. Elige uno arriba y pulsa «Agregar al pedido».</div>')+
+   '<div class="row" style="margin-top:12px">'+whoField('w-pos')+
    '<label class="f">Medio de pago<select data-bind="posch">'+CH.concat(['Queda debiendo']).map(function(c){return '<option'+(S.pos.ch===c?' selected':'')+'>'+c+'</option>'}).join('')+'</select></label>'+
    '<label class="f">Cliente<select data-bind="posst" style="width:230px"><option value="">Mostrador (sin cliente)</option><optgroup label="Estudiantes">'+act().slice().sort(function(a,b){return a.name.localeCompare(b.name,'es')}).map(function(s){return '<option value="'+esc(s.name)+'"'+(S.pos.sel===s.name?' selected':'')+'>'+esc(s.name)+' · '+s.groups.join(', ')+'</option>'}).join('')+'</optgroup><option value="__otro"'+(S.pos.sel==='__otro'?' selected':'')+'>Otra persona (escribir nombre)</option></select></label>'+(S.pos.sel==='__otro'?'<label class="f">Nombre<input data-bind="poscl" value="'+esc(S.pos.cl)+'" placeholder="Nombre de quien compra" style="width:170px"></label>':'')+
-   '<button class="btn" data-act="sell">Registrar salida</button></div><p class="note" style="margin:8px 0 0">Valor de esta salida: <b>'+fmt(tot)+'</b></p></div>'+
+   '<button class="btn" data-act="sell"'+(cart.length?'':' disabled')+'>Registrar venta · '+fmt(tot)+'</button></div></div>'+
   '<div class="card"><h3>Salidas registradas</h3><div class="tw"><table><thead><tr><th>Fecha</th><th>Producto</th><th class="r">Cant.</th><th class="r">Valor</th><th>Cliente</th><th>Pago</th><th>Dónde se refleja</th><th>Registró</th><th></th></tr></thead><tbody>'+
    sales.slice().reverse().map(function(v){return '<tr><td>'+dl(v.date)+'</td><td>'+esc(v.product)+'</td><td class="r">'+v.qty+'</td><td class="r">'+fmt(v.total)+'</td><td>'+esc(v.client)+'</td><td>'+(v.status==='Pagó'?'<span class="pill ok">Pagó · '+v.channel+'</span>':'<span class="pill bad">Debe</span>')+'</td><td>'+(v.status==='Pagó'?'Caja · '+v.channel:'Cartera · pendiente')+'</td><td>'+esc(v.who)+'</td><td>'+(v.status==='Debe'?'<button class="btn sm" data-act="paysale" data-id="'+v.id+'">Cobrar</button>':'')+'</td></tr>'}).join('')+'</tbody></table></div></div>';
 }
@@ -1090,16 +1137,22 @@ document.addEventListener('click',function(e){
     addMove({date:TODAY,unit:d.unit,cat:d.cat==='cafeteria'?'cafeteria':'ingreso',concept:'Cobro de cartera · '+d.debtor+' · '+d.concept,channel:m2.channel,amount:d.amount,who:who2});
     if(d.saleId){var sl=sales.filter(function(x){return x.id===d.saleId})[0];if(sl){sl.status='Pagó';sl.channel=m2.channel}}
     debts=debts.filter(function(x){return x.id!==d.id});doneWho('w-pay');S.modal=null;render();toast('Cobro registrado por '+who2+': '+fmt(d.amount));return}
+  if(a==='posadd'){var pa=inv.filter(function(x){return x.id===+(S.pos.p||inv[0].id)})[0],qa=Math.max(1,Math.floor(+S.pos.q||1)),ex=(S.pos.cart||[]).filter(function(c){return c.p===pa.id})[0],yaq=ex?ex.q:0;
+    if(yaq+qa>pa.stock){toast('Solo quedan '+pa.stock+' de '+pa.name+(yaq?' (ya hay '+yaq+' en el pedido)':'')+'.');return}
+    if(ex)ex.q+=qa;else S.pos.cart.push({p:pa.id,q:qa});S.pos.q=1;render();return}
+  if(a==='posrm'){S.pos.cart.splice(id,1);render();return}
   if(a==='sell'){
-    var w3=needWho('w-pos');if(!w3)return;
-    var p=inv.filter(function(x){return x.id===+(S.pos.p||inv[0].id)})[0],q=Math.max(1,Math.floor(+S.pos.q||1)),cl=(S.pos.cl||'').trim();
-    if(q>p.stock){toast('Solo quedan '+p.stock+' de '+p.name+'.');return}
-    var tot=q*p.price,debe=S.pos.ch==='Queda debiendo';
-    if(debe&&!cl){toast('Escribe el nombre de quien queda debiendo.');return}
-    p.stock-=q;p.sold+=q;var sale={id:++sid,date:TODAY,product:p.name,cat:p.cat,qty:q,total:tot,client:cl||'Mostrador',status:debe?'Debe':'Pagó',channel:debe?'':S.pos.ch,who:w3};sales.push(sale);
-    if(debe){debts.push({id:++did,unit:'gym',cat:'cafeteria',debtor:cl,concept:'Cafetería · '+q+' '+p.name,amount:tot,saleId:sale.id});toast(q+' '+p.name+' pasó a cartera de '+cl+' (registró '+w3+')')}
-    else{addMove({date:TODAY,unit:'gym',cat:'cafeteria',concept:'Venta cafetería · '+q+' '+p.name+(cl?' · '+cl:''),channel:S.pos.ch,amount:tot,who:w3});toast('Venta registrada por '+w3+': '+q+' '+p.name+' · '+fmt(tot))}
-    doneWho('w-pos');S.pos.q=1;S.pos.cl='';S.pos.sel='';render();return}
+    var w3=needWho('w-pos');if(!w3)return;var cart=S.pos.cart||[],cl=(S.pos.cl||'').trim();
+    if(!cart.length){toast('Agrega al menos un producto al pedido.');return}
+    var debe=S.pos.ch==='Queda debiendo';if(debe&&!cl){toast('Escribe el nombre de quien queda debiendo.');return}
+    for(var ci=0;ci<cart.length;ci++){var pc=inv.filter(function(x){return x.id===cart[ci].p})[0];if(cart[ci].q>pc.stock){toast('Solo quedan '+pc.stock+' de '+pc.name+'.');return}}
+    var gt=0,desc=[];
+    cart.forEach(function(c){var p=inv.filter(function(x){return x.id===c.p})[0],tot=c.q*p.price;gt+=tot;desc.push(c.q+' '+p.name);
+      p.stock-=c.q;p.sold+=c.q;var sale={id:++sid,date:TODAY,product:p.name,cat:p.cat,qty:c.q,total:tot,client:cl||'Mostrador',status:debe?'Debe':'Pagó',channel:debe?'':S.pos.ch,who:w3};sales.push(sale);
+      if(debe)debts.push({id:++did,unit:'gym',cat:'cafeteria',debtor:cl,concept:'Cafetería · '+c.q+' '+p.name,amount:tot,saleId:sale.id})});
+    if(debe)toast('Pedido de '+fmt(gt)+' pasó a cartera de '+cl+' (registró '+w3+')');
+    else{addMove({date:TODAY,unit:'gym',cat:'cafeteria',concept:'Venta cafetería · '+desc.join(', ')+(cl?' · '+cl:''),channel:S.pos.ch,amount:gt,who:w3});toast('Venta registrada por '+w3+': '+desc.join(', ')+' · Total '+fmt(gt))}
+    doneWho('w-pos');S.pos.q=1;S.pos.cl='';S.pos.sel='';S.pos.cart=[];render();return}
   if(a==='entrada'){
     var w4=needWho('w-ent');if(!w4)return;
     var prod=inv.filter(function(x){return x.id===+$('#e-p').value})[0],qn=Math.max(1,Math.floor(+$('#e-q').value||1)),cost=Math.max(0,+$('#e-c').value||0),chn=$('#e-ch').value;
@@ -1166,11 +1219,27 @@ document.addEventListener('click',function(e){
     var name=$('#n-name').value.trim();if(!name){toast('Escribe el nombre del alumno.');return}
     var grp=$('#n-grp').value,ns={id:++nextId,name:name,gender:$('#n-gen').value,groups:[grp],level:LEVEL[grp],age:Math.max(3,+$('#n-age').value||8),plan:$('#n-plan').value,months:0,paid:false,info:null,owes:[],adv:[],out:null,ach:emptyAch(),last:0,log:[{date:TODAY,text:'Ingreso al grupo '+grp,who:w11,media:null}]};
     setStart(ns,$('#n-start').value);students.push(ns);doneWho('w-stu');render();toast(name+' ingresó al grupo '+grp+'. Registró '+w11+'.');return}
-  if(a==='unipedido'){var wu=needWho('w-uni');if(!wu)return;var ua=unif[+$('#u-art').value],uq=Math.max(0,Math.floor(+$('#u-q').value||0)),uv=+$('#u-vu').value||0,uab=Math.max(0,+$('#u-ab').value||0),us=stu($('#u-stu').value||0),utot=uq*uv;
-    if(uq<1){toast('Escribe la cantidad.');return}if(!(uv>0)){toast('Escribe el valor por unidad.');return}if(uab>utot){toast('Lo recibido no puede superar el total del pedido ('+fmt(utot)+').');return}
-    ua.ped+=uq;ua.rec+=uab;ua.pend=(ua.pend||0)+(utot-uab);
-    if(uab>0)addMove({date:TODAY,unit:'escuela',cat:'uniforme',concept:'Pedido '+ua.n+' x'+uq+(us?' · '+us.name:'')+(utot>uab?' (saldo '+fmt(utot-uab)+')':''),channel:$('#u-ch').value,amount:uab,who:wu});
-    doneWho('w-uni');render();toast('Pedido registrado por '+wu+': '+uq+' '+ua.n.toLowerCase()+' por '+fmt(utot)+(utot>uab?'. Quedan '+fmt(utot-uab)+' por cobrar.':'.'));return}
+  if(a==='uoarch'){var oid=t.getAttribute('data-o'),wr=needWho('w-arch-'+oid);if(!wr)return;var oo=UO.filter(function(x){return x.id===oid})[0];if(!oo)return;
+    var cv=$('#ar-c-'+oid).value;oo.arch={date:TODAY,who:wr,cost:cv===''?null:Math.max(0,+cv||0),note:($('#ar-n-'+oid).value||'').trim()};doneWho('w-arch-'+oid);S.uopick=null;render();toast('Pedido archivado por '+wr+'. Lo encuentras en «Pedidos archivados».');return}
+  if(a==='uoarchver'){var ov=t.getAttribute('data-o');S.uoav=S.uoav===ov?null:ov;render();return}
+  if(a==='uoreopen'){var orp=UO.filter(function(x){return x.id===t.getAttribute('data-o')})[0];if(orp){delete orp.arch;S.uoav=null}render();toast('Pedido reabierto');return}
+  if(a==='uoall'){act().forEach(function(s){if(S.uof.g==='Todos'||s.groups.indexOf(S.uof.g)>=0)S.uos[s.id]=true});render();return}
+  if(a==='uonone'){S.uos={};render();return}
+  if(a==='uoadd'){var F=S.uof,ids=Object.keys(S.uos).filter(function(k){return S.uos[k]}).map(Number),vq=Math.max(1,Math.floor(+F.q||1)),vv=+F.vu||0;
+    if(!(vv>0)){toast('Escribe el valor por unidad.');return}if(!ids.length){toast('Marca al menos una alumna.');return}if(!F.date){toast('Elige la fecha del pedido.');return}
+    var oa=unif[+F.art];UO.push({id:'o'+Date.now().toString(36),art:+F.art,vu:vv,date:F.date,lines:ids.map(function(sid){return {sid:sid,q:vq,list:[]}})});
+    oa.ped+=vq*ids.length;oa.pend=(oa.pend||0)+vq*ids.length*vv;S.uos={};S.uopick=null;render();toast('Pedido registrado: '+oa.n+' para '+ids.length+' alumna(s) · '+fmt(vq*ids.length*vv)+' por cobrar.');return}
+  if(a==='uopick'){S.uopick={o:t.getAttribute('data-o'),sid:+t.getAttribute('data-sid')};render();setTimeout(function(){var e3=$('#uo-det');if(e3)e3.scrollIntoView({behavior:'smooth',block:'start'})},50);return}
+  if(a==='uopickx'){S.uopick=null;render();return}
+  if(a==='uodel'){var od=t.getAttribute('data-o'),ox=UO.filter(function(x){return x.id===od})[0];if(!ox)return;var ua2=unif[ox.art];ua2.ped-=sum(ox.lines,function(l){return l.q});ua2.pend=(ua2.pend||0)-sum(ox.lines,function(l){return l.q*ox.vu});UO=UO.filter(function(x){return x.id!==od});S.uopick=null;render();toast('Pedido eliminado');return}
+  if(a==='uoabono'){var wa=needWho('w-uoab');if(!wa)return;var po=UO.filter(function(x){return x.id===S.uopick.o})[0],pl=po.lines.filter(function(x){return x.sid===S.uopick.sid})[0],ua3=unif[po.art];
+    var av2=Math.floor(+$('#uab-v').value||0),ad2=$('#uab-d').value,sal=pl.q*po.vu-uoPaid(pl);
+    if(av2<=0){toast('Escribe el valor del abono.');return}if(!ad2){toast('Elige la fecha del pago.');return}if(av2>sal){toast('El abono supera el saldo ('+fmt(sal)+').');return}
+    var pid3='p'+Date.now().toString(36),ch3=$('#uab-ch').value;pl.list.push({id:pid3,date:ad2,amount:av2,channel:ch3,who:wa});ua3.rec+=av2;ua3.pend=(ua3.pend||0)-av2;
+    addMove({key:'uo:'+po.id+':'+pl.sid+':'+pid3,date:ad2,unit:'escuela',cat:'uniforme',concept:'Pedido '+ua3.n+' x'+pl.q+' · '+stu(pl.sid).name,channel:ch3,amount:av2,who:wa});
+    doneWho('w-uoab');var comp=po.lines.every(function(x){return uoPaid(x)>=x.q*po.vu});if(comp)S.uopick=null;render();toast(comp?'Abono registrado. Todas las alumnas pagaron este pedido: ya puedes archivarlo.':'Abono de '+fmt(av2)+' registrado por '+wa+'. Saldo: '+fmt(sal-av2));return}
+  if(a==='uoabonodel'){var wz=needWho('w-uoab');if(!wz)return;var pz=UO.filter(function(x){return x.id===S.uopick.o})[0],lz=pz.lines.filter(function(x){return x.sid===S.uopick.sid})[0],pidz=t.getAttribute('data-pid'),it=lz.list.filter(function(x){return x.id===pidz})[0];
+    if(it){lz.list=lz.list.filter(function(x){return x.id!==pidz});unif[pz.art].rec-=it.amount;unif[pz.art].pend=(unif[pz.art].pend||0)+it.amount;M=M.filter(function(m){return m.key!=='uo:'+pz.id+':'+lz.sid+':'+pidz})}render();toast('Abono anulado por '+wz);return}
   if(a==='unipago'){var wp=needWho('w-uniprov');if(!wp)return;var up=unif[+$('#up-art').value],uvp=+$('#up-v').value||0;
     if(!(uvp>0)){toast('Escribe el valor que pagas al proveedor.');return}
     up.ent+=uvp;addMove({date:TODAY,unit:'escuela',cat:'uniforme',concept:'Pago a proveedor · '+up.n,channel:$('#up-ch').value,amount:-uvp,who:wp});
@@ -1193,7 +1262,18 @@ document.addEventListener('click',function(e){
   if(a==='cvadd'){var cn=$('#cv-n').value.trim();if(!cn){toast('Escribe el nombre de la persona.');return}CR[S.convSel].push({id:++crid,name:cn});render();toast(cn+' ingresó a '+S.convSel);return}
   if(a==='cvdel'){var ls=CR[S.convSel],pp=ls.filter(function(x){return x.id===id})[0];CR[S.convSel]=ls.filter(function(x){return x.id!==id});render();toast(pp.name+' fue retirado de '+S.convSel);return}
   /* campeonatos */
-  if(a==='champ'){S.champ=t.getAttribute('data-id');S.champDel=null;render();return}
+  if(a==='campst'){S.campSt=id;render();setTimeout(function(){var e2=$('#camp-det');if(e2)e2.scrollIntoView({behavior:'smooth',block:'start'})},50);return}
+  if(a==='campstx'){S.campSt=null;render();return}
+  if(a==='abono'){var wab=needWho('w-abono');if(!wab)return;var ca=curChamp(),sa=S.campSt,pa=ca.pay[sa]=ca.pay[sa]||{amount:0,channel:'Efectivo',seed:0,list:[]};pa.list=pa.list||[];
+    var av=Math.floor(+$('#ab-v').value||0),ad=$('#ab-d').value,perA=ca.fee+ca.trip,paid=sum(pa.list,function(x){return x.amount});
+    if(av<=0){toast('Escribe el valor del abono.');return}
+    if(!ad){toast('Elige la fecha del pago.');return}
+    if(av>perA-paid){toast('El abono supera el saldo ('+fmt(Math.max(0,perA-paid))+').');return}
+    var pid='p'+Date.now().toString(36),chA=$('#ab-ch').value;pa.list.push({id:pid,date:ad,amount:av,channel:chA,who:wab});pa.amount=paid+av;pa.channel=chA;
+    addMove({key:'ch:'+ca.id+':'+sa+':'+pid,date:ad,unit:'escuela',cat:'torneo',concept:'Campeonato '+ca.name+' · '+stu(sa).name,channel:chA,amount:av,who:wab});
+    doneWho('w-abono');render();toast('Abono de '+fmt(av)+' registrado por '+wab+'. Saldo: '+fmt(Math.max(0,perA-paid-av)));return}
+  if(a==='abonodel'){var wad=needWho('w-abono');if(!wad)return;var cd2=curChamp(),pd2=cd2.pay[S.campSt];var pid2=t.getAttribute('data-pid');pd2.list=pd2.list.filter(function(x){return x.id!==pid2});pd2.amount=sum(pd2.list,function(x){return x.amount});M=M.filter(function(m){return m.key!=='ch:'+cd2.id+':'+S.campSt+':'+pid2});render();toast('Abono anulado por '+wad);return}
+  if(a==='champ'){S.campSt=null;S.champ=t.getAttribute('data-id');S.champDel=null;render();return}
   if(a==='champdel'){S.champDel=S.champ;render();return}
   if(a==='champdelno'){S.champDel=null;render();return}
   if(a==='champdelok'){var wcd=needWho('w-campdel');if(!wcd)return;var cd=curChamp(),nm=cd.name,had=M.filter(function(m){return m.key&&m.key.indexOf('ch:'+cd.id+':')===0}).length;
@@ -1251,10 +1331,6 @@ document.addEventListener('change',function(e){
   if(b==='cf'){var k2=t.getAttribute('data-k');c[k2]=(k2==='name'||k2==='city'||k2==='date')?t.value:Math.max(0,+t.value||0);render();return}
   if(b==='cg'){var g=t.getAttribute('data-g');c.groups=GROUPS.filter(function(x){return x===g?t.checked:c.groups.indexOf(x)>=0});
     rosterOf(c).forEach(function(s3){if(!c.pay[s3.id])c.pay[s3.id]={amount:0,channel:'Efectivo',seed:0}});render();return}
-  if(b==='cp'||b==='cc'){var wcmp=needWho('w-camp');if(!wcmp){render();return}
-    var sid3=t.getAttribute('data-id');c.pay[sid3]=c.pay[sid3]||{amount:0,channel:'Efectivo',seed:0};
-    if(b==='cp')c.pay[sid3].amount=Math.max(0,+t.value||0);else c.pay[sid3].channel=t.value;
-    syncChampMove(c,sid3,wcmp);render();toast('Pago de campeonato actualizado por '+wcmp);return}
 });
 document.addEventListener('focusout',function(e){var t=e.target;if(!t.getAttribute||t.getAttribute('data-bind')!=='cf'||t.type!=='date')return;
   var y=+(t.value||'0').slice(0,4),Y=+TODAY.slice(0,4),c=curChamp();if(!c||!t.value)return;
@@ -1264,6 +1340,9 @@ document.addEventListener('input',function(e){
   if(b==='who'){S.who[t.getAttribute('data-w')]=t.value;return}
   if(b==='insf'){S.ins.f[t.getAttribute('data-k')]=t.value;render();return}
   if(b==='fq'){S.f.q=t.value;$('#mt').innerHTML=mensTable();labelTables();return}
+  if(b==='uof'){S.uof[t.getAttribute('data-k')]=t.value;return}
+  if(b==='uochk'){S.uos[t.getAttribute('data-sid')]=t.checked;return}
+  if(b==='uofg'){S.uof.g=t.value;render();return}
   if(b==='posst'){S.pos.sel=t.value;S.pos.cl=t.value==='__otro'?'':t.value;render();return}
   if(b==='poscl'){S.pos.cl=t.value;return}
   if(b==='posq'){S.pos.q=t.value;return}
