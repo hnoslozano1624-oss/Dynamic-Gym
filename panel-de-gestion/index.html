@@ -316,6 +316,15 @@ var PRICE={'12':150000,'8':120000,'4':100000,'dance':100000};
 var PLAN={'12':'12 clases','8':'8 clases','4':'4 clases','dance':'Dance'};
 var PASS=['torneo','uniforme','anticipo'];
 var FUT=['Noviembre','Diciembre','Enero'];
+var MSTART=['Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre','Enero'];
+function startOf(s){return s.start||'Octubre'}
+function startsLater(s){return MSTART.indexOf(startOf(s))>MSTART.indexOf('Octubre')}
+function octDue(s){return !(s.out||s.paid)&&!startsLater(s)}
+function billable(){return students.filter(function(s){return !s.out&&!startsLater(s)})}
+function setStart(s,m){s.start=m;var i=MSTART.indexOf(m),io=MSTART.indexOf('Octubre');s.owes=MSTART.slice(0,io).filter(function(x){return MSTART.indexOf(x)>=i&&(s.owes.indexOf(x)>=0||MSTART.indexOf(x)>=i)});if(i>io)s.paid=false}
+var MSEL=['Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'], MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function startOpts(cur,auto){var l=MSEL.slice();if(cur&&cur!=='auto'&&l.indexOf(cur)<0)l.unshift(cur);return (auto?'<option value="auto"'+(!cur||cur==='auto'?' selected':'')+'>Automático (mes de la inscripción)</option>':'')+l.map(function(m){return '<option'+(cur===m?' selected':'')+'>'+m+'</option>'}).join('')}
+function autoMonth(rec){var m=MESES[new Date(rec.sentAt||TODAY).getMonth()];return MSTART.indexOf(m)>=0?m:'Octubre'}
 var UN={escuela:['e','Dynamic Old Star'],gym:['g','Dynamic GYM'],general:['n','General']};
 var MOTIVOS=['Económico','Cambio de ciudad','Lesión','Pierde el interés','Cambio de academia','Otro'];
 
@@ -450,7 +459,7 @@ var wc=FN.slice(0,12).map(function(n,i){
 
 /* ---------- estado de interfaz ---------- */
 var S={view:'resumen',sub:{escuela:'mens',gym:'caf'},caf:'prod',f:{g:'Todos',st:'Todos',q:'',gen:'Todos'},champ:'c1',
-  pos:{ch:'Efectivo',cl:'',q:1,p:null},wcM:'2026-10',im:'2026-10',wcCh:'Nequi',showOut:false,convSel:'Spartan',who:{},
+  pos:{ch:'Efectivo',cl:'',q:1,p:null},wcM:'2026-10',im:'2026-10',wcCh:'Nequi',showOut:false,multi:false,convSel:'Spartan',who:{},
   caja:{u:'Todas'},dep:{g:'Pink',sid:null,pending:null},modal:null,ingf:{}};
 
 /* ---------- cálculos ---------- */
@@ -461,13 +470,13 @@ function egUnit(u){return 0-sum(M.filter(function(m){return m.cat==='gasto'&&m.u
 function egresos(){return egUnit('escuela')+egUnit('gym')+egUnit('general')}
 function bal(c){return OPEN[c]+sum(M.filter(function(m){return m.channel===c}),function(m){return m.amount})}
 function totalBal(){return sum(CH,bal)}
-function owedOf(s){return (s.out||s.paid?0:PRICE[s.plan])+s.owes.length*PRICE[s.plan]}
+function owedOf(s){return (octDue(s)?PRICE[s.plan]:0)+s.owes.length*PRICE[s.plan]}
 function carteraEsc(){return students.filter(function(s){return owedOf(s)>0})}
 function carteraEscTot(){return sum(students,owedOf)}
 function wcPendTot(){return sum(wc,function(o){return wcDueNow(o,CURM)})}
 function carteraGymTot(){return sum(debts,function(d){return d.amount})+wcPendTot()}
-function esperado(){return sum(act(),function(s){return PRICE[s.plan]})}
-function recaudado(){return sum(act().filter(function(s){return s.paid}),function(s){return PRICE[s.plan]})}
+function esperado(){return sum(billable(),function(s){return PRICE[s.plan]})}
+function recaudado(){return sum(billable().filter(function(s){return s.paid}),function(s){return PRICE[s.plan]})}
 function anticipos(){return sum(M.filter(function(m){return m.cat==='anticipo'}),function(m){return m.amount})}
 function rosterOf(c){return act().filter(function(s){return (s.groups.some(function(g){return c.groups.indexOf(g)>=0})&&c.out.indexOf(s.id)<0)||c.extra.indexOf(s.id)>=0})}
 function ensureAch(s){if(!s.achG){s.achG={};s.achG[s.groups[0]]=s.ach}}
@@ -475,7 +484,7 @@ function achOf(s,g){ensureAch(s);g=g||s.groups[0];if(!s.achG[g])s.achG[g]=emptyA
 function nAch(s,g){var gs=g?[g]:s.groups;return sum(gs,function(x){var a=achOf(s,x);return sum(['b','a','e'],function(k){return a[k].filter(Boolean).length})})}
 function levelOf(s,g){return LEVEL[g]||s.level}
 function pgOf(s){return s.groups.indexOf(S.dep.pg)>=0?S.dep.pg:(s.groups.indexOf(S.dep.g)>=0?S.dep.g:s.groups[0])}
-function teamPill(s,g){var o=s.groups.filter(function(x){return x!==g}).concat(s.ext||[]);if(!o.length)return '';return ' <span class="pill warn" title="Misma estudiante en más de un equipo">'+(g?'También en ':'En ')+(g?o.join(', '):(s.groups.length+(s.ext||[]).length)+' equipos: '+s.groups.concat(s.ext||[]).join(', '))+'</span>'}
+function teamPill(s,g){var o=s.groups.filter(function(x){return x!==g}).concat(s.ext||[]);if(!o.length||s.groups.length+(s.ext||[]).length<2)return '';return ' <span class="pill warn" title="Misma estudiante en más de un equipo">'+(g?'También en ':'En ')+(g?o.join(', '):(s.groups.length+(s.ext||[]).length)+' equipos: '+s.groups.concat(s.ext||[]).join(', '))+'</span>'}
 
 function toast(t){var e=$('#toast');e.innerHTML='<div class="toast">'+esc(t)+'</div>';clearTimeout(toast.t);toast.t=setTimeout(function(){e.innerHTML=''},3600)}
 function stu(id){return students.filter(function(x){return x.id===+id})[0]}
@@ -497,8 +506,9 @@ function insApply(rec){
   if(d.unidad==='escuela'){
     var grp=gsel(d.grupo)||'Fundamentación',noG=!gsel(d.grupo),gyms=insLoad().filter(function(x){return x.doc===rec.doc&&x.id!==rec.id&&x.status==='Recibida'&&x.data&&x.data.unidad==='gym'}).map(function(x){return x.data.modalidad==='wildcats'?'Wildcats':(x.data.modalidad==='convenio'?x.data.entidad:'Ingreso o liga')});
     if(ex){ensureAch(ex);if(ex.groups.indexOf(grp)<0){ex.groups.push(grp);ex.achG[grp]=emptyAch();ex.log.push({date:(rec.sentAt||TODAY).slice(0,10),text:'Segunda inscripción: ingresó también al equipo '+grp,who:d.acudiente,media:null})}ex.insc2=rec.id}
-    else{students.push(ex={id:++nextId,doc:rec.doc,name:name,gender:d.sexo==='Masculino'?'Masculino':'Femenino',groups:[grp],level:LEVEL[grp],age:insAge(d.fechaNac),plan:d.plan||'8',months:0,paid:false,info:null,owes:[],adv:[],out:null,ach:emptyAch(),last:0,insc:rec.id,ext:gyms,
+    else{students.push(ex={id:++nextId,doc:rec.doc,name:name,gender:d.sexo==='Masculino'?'Masculino':'Femenino',groups:[grp],level:LEVEL[grp],age:insAge(d.fechaNac),plan:d.plan||'8',months:0,paid:false,info:null,owes:[],adv:[],out:null,ach:emptyAch(),last:0,insc:rec.id,ext:gyms,start:rec.inicio||autoMonth(rec),
       log:[{date:(rec.sentAt||TODAY).slice(0,10),text:'Inscripción hecha por el acudiente'+(noG?'. Grupo por asignar por la entrenadora':''),who:d.acudiente,media:null}]})}
+    if(ex.insc===rec.id)setStart(ex,rec.inicio||autoMonth(rec));
     var g2=gsel(d.grupo2);if(g2&&ex.groups.indexOf(g2)<0){ensureAch(ex);ex.groups.push(g2);ex.achG[g2]=emptyAch();ex.log.push({date:(rec.sentAt||TODAY).slice(0,10),text:'Inscrita también al equipo '+g2,who:d.acudiente,media:null})}
   }else{var lab=d.modalidad==='wildcats'?'Wildcats':(d.modalidad==='convenio'?d.entidad:'Ingreso o liga');if(ex){ex.ext=(ex.ext||[]);if(ex.ext.indexOf(lab)<0)ex.ext.push(lab)}
    if(d.modalidad==='convenio'){
@@ -519,7 +529,7 @@ function insDest(rec){
 }
 var INS_LABEL={nombres:'Nombres',apellidos:'Apellidos',tipoDoc:'Tipo de documento',fechaNac:'Fecha de nacimiento',sexo:'Sexo',colegio:'Colegio',eps:'EPS',sangre:'Tipo de sangre',alergias:'Alergias o condiciones',
  acudiente:'Nombre del acudiente',parentesco:'Parentesco',celular:'Celular o WhatsApp',correo:'Correo',direccion:'Dirección o barrio',emNombre:'Contacto de emergencia',emTel:'Teléfono de emergencia',
- plan:'Plan de clases',grupo:'Grupo',grupo2:'Segundo equipo',talla:'Talla de uniforme',experiencia:'Experiencia previa',horario:'Horario de preferencia',modalidad:'Modalidad',entidad:'Entidad',modoPago:'Modalidad de pago',transporte:'Transporte',tipoIngreso:'Tipo de ingreso',
+ inicio:'Mes de inicio',plan:'Plan de clases',grupo:'Grupo',grupo2:'Segundo equipo',talla:'Talla de uniforme',experiencia:'Experiencia previa',horario:'Horario de preferencia',modalidad:'Modalidad',entidad:'Entidad',modoPago:'Modalidad de pago',transporte:'Transporte',tipoIngreso:'Tipo de ingreso',
  autDatos:'Autoriza tratamiento de datos',autImagen:'Autoriza uso de imagen',autReglamento:'Acepta reglamento'};
 function insLink(){return location.href.split('#')[0].split('?')[0]+'?inscripcion=1'}
 
@@ -533,6 +543,7 @@ function vInsc(){
   h+='<div class="card"><h3>Crear acceso para un acudiente</h3><p class="sub">El usuario es la cédula del acudiente y la contraseña es el documento de la estudiante. Después de crearlo, envía el enlace por WhatsApp.</p><div class="row">'+
     '<label class="f">Cédula del acudiente (usuario)<input id="in-ced" inputmode="numeric" autocomplete="off" style="width:200px" placeholder="Solo números"></label>'+
     '<label class="f">Documento de la estudiante (contraseña)<input id="in-doc" autocomplete="off" style="width:220px" placeholder="Número de documento"></label>'+
+    '<label class="f">Mes de inicio de la mensualidad<select id="in-ini" style="width:160px">'+startOpts('auto',true)+'</select></label>'+
     '<label class="f">Nombre del acudiente (opcional)<input id="in-acu" style="width:200px"></label>'+
     '<label class="f">Nombre de la estudiante (opcional)<input id="in-est" style="width:200px"></label>'+
     '<button class="btn" data-act="insnew">Crear acceso</button></div>'+
@@ -574,7 +585,7 @@ function portalRender(){
     var v=P.vals,un=v.unidad||'',mo=v.modalidad||'convenio';
     h+='<h1>Inscripción</h1><p class="pt-sub">Llena los datos de la estudiante y del acudiente. Los campos con * son obligatorios.</p><form id="ptform" class="pt-card" novalidate>'+
       '<h2>Unidad</h2><div class="pg">'+pf('unidad','¿En cuál unidad se inscribe?','select',{req:1,opts:[['','Elige una opción'],['escuela','Dynamic Old Star (escuela)'],['gym','Dynamic GYM (centro de entrenamiento)']]})+'</div>';
-    if(un==='escuela')h+='<h2>Datos de Dynamic Old Star</h2><div class="pg">'+pf('plan','Plan de clases','select',{req:1,opts:Object.keys(PLAN).map(function(k){return [k,PLAN[k]+' · '+fmt(PRICE[k])+' al mes']})})+
+    if(un==='escuela')h+='<h2>Datos de Dynamic Old Star</h2><div class="pg">'+pf('inicio','Mes de inicio de la mensualidad','text',{ro:1,val:r.inicio||'Automático: el mes en que envíes la inscripción'})+pf('plan','Plan de clases','select',{req:1,opts:Object.keys(PLAN).map(function(k){return [k,PLAN[k]+' · '+fmt(PRICE[k])+' al mes']})})+
       pf('grupo','Grupo','select',{opts:[['Por definir','Por definir (lo asigna la entrenadora)']].concat(GROUPS)})+pf('grupo2','Segundo equipo (si participa en otro)','select',{opts:[['','Ninguno']].concat(GROUPS)})+pf('talla','Talla de uniforme','select',{opts:TALLAS})+
       pf('experiencia','Experiencia previa','select',{opts:['Ninguna','Menos de 1 año','De 1 a 3 años','Más de 3 años']})+pf('horario','Horario de preferencia','text',{ph:'Ej.: sábados en la mañana'})+'</div>';
     if(un==='gym'){h+='<h2>Datos de Dynamic GYM</h2><div class="pg">'+pf('modalidad','Modalidad','select',{req:1,opts:[['convenio','Convenio con una escuela o colegio'],['wildcats','Wildcats'],['liga','Ingreso al gimnasio o liga']]});
@@ -749,9 +760,10 @@ function genOpts(){return ['Todos','Femenino','Masculino'].map(function(g){retur
 function mensTable(){
   var rows=filteredStudents();
   if(!rows.length)return '<div class="empty">No hay alumnos con esos filtros.</div>';
-  return '<div class="tw"><table><thead><tr><th>Alumno</th><th>Género</th><th>Grupos</th><th>Plan</th><th>Octubre</th><th>Meses atrasados</th><th>Anticipos</th><th class="r">Total que debe</th><th>Último pago</th><th>Registró</th><th></th></tr></thead><tbody>'+
+  return '<div class="tw"><table><thead><tr><th>Alumno</th><th>Género</th><th>Grupos</th><th>Plan</th><th>Mes de inicio</th><th>Octubre</th><th>Meses atrasados</th><th>Anticipos</th><th class="r">Total que debe</th><th>Último pago</th><th>Registró</th><th></th></tr></thead><tbody>'+
     rows.map(function(s){var ow=owedOf(s);return '<tr><td>'+s.name+'</td><td>'+s.gender+'</td><td>'+s.groups.join(', ')+'</td><td>'+PLAN[s.plan]+' · '+fmt(PRICE[s.plan])+'</td>'+
-      '<td>'+(s.paid?'<span class="pill ok">Pagó</span>':'<span class="pill bad">Pendiente</span>')+'</td>'+
+      '<td><select class="wcsel" data-bind="start" data-id="'+s.id+'" aria-label="Mes de inicio de '+esc(s.name)+'">'+startOpts(startOf(s))+'</select></td>'+
+      '<td>'+(startsLater(s)?'<span class="pill n">Inicia en '+startOf(s).toLowerCase()+'</span>':(s.paid?'<span class="pill ok">Pagó</span>':'<span class="pill bad">Pendiente</span>'))+'</td>'+
       '<td>'+(s.owes.length?'<span class="pill warn">'+s.owes.join(', ')+'</span>':'—')+'</td>'+
       '<td>'+(s.adv.length?'<span class="pill i">'+s.adv.join(', ')+'</span>':'—')+'</td>'+
       '<td class="r">'+(ow?'<b style="color:var(--bad)">'+fmt(ow)+'</b>':'—')+'</td>'+
@@ -763,7 +775,7 @@ function vMens(){
   var pt='<div class="tw"><table><thead><tr><th>Plan</th><th class="r">Valor mensual</th><th class="r">Alumnos</th><th class="r">Esperado</th></tr></thead><tbody>'+
     ['12','8','4','dance'].map(function(p){var n=A.filter(function(s){return s.plan===p}).length;return '<tr><td>'+PLAN[p]+'</td><td class="r">'+fmt(PRICE[p])+'</td><td class="r">'+n+'</td><td class="r">'+fmt(n*PRICE[p])+'</td></tr>'}).join('')+'</tbody></table></div>';
   var nF=A.filter(function(s){return s.gender==='Femenino'}).length,nAd=A.filter(function(s){return s.adv.length}).length,nOw=A.filter(function(s){return s.owes.length}).length;
-  return '<div class="grid kpis">'+kpi('e','Esperado del mes',fmt(esperado()),A.length+' alumnos · '+nF+' niñas · '+(A.length-nF)+' niños')+kpi('e','Recaudado en octubre',fmt(recaudado()),paid+' pagaron')+kpi('e','Por cobrar',fmt(carteraEscTot()),'Octubre y meses atrasados · '+nOw+' alumnos deben meses anteriores')+kpi('e','Pagos anticipados',fmt(anticipos()),nAd+' alumnos ya pagaron meses futuros')+'</div>'+
+  return '<div class="grid kpis">'+kpi('e','Esperado del mes',fmt(esperado()),billable().length+' alumnos · '+nF+' niñas · '+(A.length-nF)+' niños'+(A.length>billable().length?' · '+(A.length-billable().length)+' inician después':''))+kpi('e','Recaudado en octubre',fmt(recaudado()),paid+' pagaron')+kpi('e','Por cobrar',fmt(carteraEscTot()),'Octubre y meses atrasados · '+nOw+' alumnos deben meses anteriores')+kpi('e','Pagos anticipados',fmt(anticipos()),nAd+' alumnos ya pagaron meses futuros')+'</div>'+
   '<div class="card"><h3>Tarifas de mensualidad</h3><p class="sub">Parametrizadas. El valor se asigna solo según el plan del alumno.</p>'+pt+'</div>'+
   '<div class="card"><h3>Mensualidades</h3><p class="sub">Cada pago indica qué meses cubre. Los meses futuros quedan como anticipo y no se mezclan con el ingreso de octubre.</p>'+
   '<div class="hint" style="margin-bottom:12px">Ejemplo de mes sin pagar: filtra por <b>Con meses atrasados</b>. Verás a quién le falta septiembre, cuánto debe en total y el botón para registrar el pago.</div>'+
@@ -779,12 +791,13 @@ function vCamp(){
   if(!c)return tabs;
   var per=c.fee+c.trip,tot=ros.length*per,rec=sum(ros,function(s){return (c.pay[s.id]||{amount:0}).amount});
   var comp=ros.length*c.compPer,compTot=comp*c.compTrip;
-  var f=function(id,l,v,t){return '<label class="f">'+l+'<input data-bind="cf" data-k="'+id+'" type="'+(t||'number')+'" value="'+esc(v)+'" step="10000" style="width:'+(t==='text'||t==='date'?'150px':'130px')+'"></label>'};
+  var f=function(id,l,v,t){return '<label class="f">'+l+'<input data-bind="cf" data-k="'+id+'" type="'+(t||'number')+'" value="'+esc(v)+'"'+(t==='date'?' min="'+TODAY.slice(0,4)+'-01-01" max="'+(+TODAY.slice(0,4)+1)+'-12-31"':'')+(t==='date'||t==='text'?'':' step="10000"')+' style="width:'+(t==='text'||t==='date'?'150px':'130px')+'"></label>'};
   var rin={};ros.forEach(function(s){rin[s.id]=1});
   var avail=act().filter(function(s){return !rin[s.id]});
   var h=tabs+'<div class="card"><h3>Datos del campeonato</h3><p class="sub">Valores de ejemplo. Los pagos pasan por la escuela pero no son ingreso propio.</p><div class="row">'+
     f('name','Nombre',c.name,'text')+f('city','Ciudad',c.city,'text')+f('date','Fecha',c.date,'date')+f('fee','Inscripción por deportista',c.fee)+f('trip','Viaje por deportista',c.trip)+f('compTrip','Viaje por acompañante',c.compTrip)+f('compPer','Acompañantes por deportista',c.compPer)+'</div>'+
     '<p class="note" style="margin-top:12px">Grupos que viajan:</p><div class="checks">'+GROUPS.map(function(g){return '<label><input type="checkbox" data-bind="cg" data-g="'+g+'"'+(c.groups.indexOf(g)>=0?' checked':'')+'>'+g+'</label>'}).join('')+'</div>'+
+    (S.champDel===c.id?'<div class="hint" style="margin-top:14px;border-color:var(--bad)"><b>¿Eliminar el campeonato '+esc(c.name)+'?</b> Se borran sus datos, la lista de deportistas y los pagos registrados ('+fmt(sum(Object.keys(c.pay),function(k){return c.pay[k].amount||0}))+'). No se puede deshacer.<div class="row" style="margin-top:10px">'+whoField('w-campdel')+'<button class="btn" style="background:var(--bad);border-color:var(--bad)" data-act="champdelok">Sí, eliminar</button><button class="btn ghost" data-act="champdelno">Cancelar</button></div></div>':'<div style="margin-top:14px"><button class="btn ghost sm" data-act="champdel">Eliminar campeonato</button></div>')+
     '<div class="row" style="margin-top:12px"><label class="f">Agregar un deportista de otro grupo<select id="c-add">'+avail.map(function(s){return '<option value="'+s.id+'">'+s.name+' · '+s.groups.join(', ')+'</option>'}).join('')+'</select></label><button class="btn ghost" data-act="cadd"'+(avail.length?'':' disabled')+'>Agregar al campeonato</button></div></div>';
   h+='<div class="grid kpis">'+kpi('e','Deportistas inscritos',ros.length,'Según los grupos marcados y los ajustes manuales')+kpi('e','Por recaudar',fmt(tot),fmt(per)+' por deportista')+kpi('e','Recaudado',fmt(rec),Math.round(tot?rec/tot*100:0)+'% del total')+kpi('n','Acompañantes estimados',comp,'Costo estimado '+fmt(compTot))+'</div>';
   h+='<div class="card"><h3>Pagos por deportista</h3><p class="sub">Escribe lo recibido. Admite abonos y pagos totales, por cualquier canal. Para cambiar un valor, escribe antes tu nombre.</p><div class="filters">'+whoField('w-camp')+'</div>'+
@@ -797,13 +810,29 @@ function vCamp(){
   return h;
 }
 function vUnif(){
-  return '<div class="card"><h3>Uniformes y accesorios</h3><p class="sub">Dinero que la escuela recoge y entrega al proveedor. Cifras de ejemplo.</p><div class="tw"><table><thead><tr><th>Artículo</th><th class="r">Pedidos</th><th class="r">Recaudado</th><th class="r">Entregado al proveedor</th><th class="r">Por entregar</th></tr></thead><tbody>'+
-   unif.map(function(u){var d=u.rec-u.ent;return '<tr><td>'+u.n+'</td><td class="r">'+u.ped+'</td><td class="r">'+fmt(u.rec)+'</td><td class="r">'+fmt(u.ent)+'</td><td class="r">'+(d>0?'<span class="pill warn">'+fmt(d)+'</span>':'<span class="pill ok">Al día</span>')+'</td></tr>'}).join('')+'</tbody></table></div>'+
-   '<p class="note" style="margin-top:10px">Este dinero entra a caja pero no cuenta como ingreso propio de la escuela. Las gorras las gestiona un tercero y no se manejan aquí.</p></div>';
+  var opt=function(l,f){return l.map(f).join('')},arts=opt(unif,function(u,i){return '<option value="'+i+'">'+esc(u.n)+'</option>'});
+  var hist=M.filter(function(m){return m.cat==='uniforme'}).slice(-8).reverse();
+  return '<div class="grid kpis">'+kpi('e','Artículos pedidos',sum(unif,function(u){return u.ped}),'Entre todos los artículos')+kpi('e','Recaudado de las familias',fmt(sum(unif,function(u){return u.rec})),'Entra a caja, no es ingreso propio')+kpi('e','Por entregar al proveedor',fmt(sum(unif,function(u){return Math.max(0,u.rec-u.ent)})),'Dinero de las familias que aún no se paga')+kpi('e','Pendiente de familias',fmt(sum(unif,function(u){return u.pend||0})),'Pedidos con saldo por cobrar')+'</div>'+
+  '<div class="card"><h3>Registrar un pedido de uniforme</h3><p class="sub">Cuando una familia pide uniformes o accesorios nuevos. Registra la cantidad, el valor y lo que ya pagó. Si no pagó todo, el saldo queda como pendiente.</p><div class="row">'+whoField('w-uni')+
+   '<label class="f">Alumna o alumno<select id="u-stu"><option value="">Sin asignar</option>'+opt(act(),function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'})+'</select></label>'+
+   '<label class="f">Artículo<select id="u-art">'+arts+'</select></label>'+
+   '<label class="f">Cantidad<input id="u-q" type="number" min="1" value="1" style="width:80px"></label>'+
+   '<label class="f">Valor por unidad<input id="u-vu" type="number" min="0" step="1000" style="width:120px"></label>'+
+   '<label class="f">Recibido hoy<input id="u-ab" type="number" min="0" step="1000" value="0" style="width:120px"></label>'+
+   '<label class="f">Canal<select id="u-ch">'+opt(CH,function(c){return '<option>'+c+'</option>'})+'</select></label>'+
+   '<button class="btn" data-act="unipedido">Registrar pedido</button></div></div>'+
+  '<div class="card"><h3>Uniformes y accesorios</h3><p class="sub">Dinero que la escuela recoge y entrega al proveedor. Cifras de ejemplo.</p><div class="tw"><table><thead><tr><th>Artículo</th><th class="r">Pedidos</th><th class="r">Recaudado</th><th class="r">Pendiente de familias</th><th class="r">Entregado al proveedor</th><th class="r">Por entregar</th></tr></thead><tbody>'+
+   unif.map(function(u){var d=u.rec-u.ent;return '<tr><td>'+esc(u.n)+'</td><td class="r">'+u.ped+'</td><td class="r">'+fmt(u.rec)+'</td><td class="r">'+((u.pend||0)?'<span class="pill warn">'+fmt(u.pend)+'</span>':'—')+'</td><td class="r">'+fmt(u.ent)+'</td><td class="r">'+(d>0?'<span class="pill warn">'+fmt(d)+'</span>':'<span class="pill ok">Al día</span>')+'</td></tr>'}).join('')+'</tbody></table></div>'+
+   '<p class="note" style="margin-top:10px">Este dinero entra a caja pero no cuenta como ingreso propio de la escuela. Las gorras las gestiona un tercero y no se manejan aquí.</p></div>'+
+  '<div class="grid two"><div class="card"><h3>Pagar al proveedor</h3><p class="sub">Registra el dinero que entregas al proveedor. Sale de la caja que elijas.</p><div class="row">'+whoField('w-uniprov')+
+   '<label class="f">Artículo<select id="up-art">'+arts+'</select></label><label class="f">Valor<input id="up-v" type="number" min="0" step="10000" style="width:130px"></label>'+
+   '<label class="f">Sale de<select id="up-ch">'+opt(CH,function(c){return '<option>'+c+'</option>'})+'</select></label><button class="btn" data-act="unipago">Registrar pago</button></div></div>'+
+  '<div class="card"><h3>Agregar un artículo nuevo</h3><p class="sub">Para un uniforme o accesorio que aún no está en la lista.</p><div class="row"><label class="f">Nombre del artículo<input id="ua-n" style="width:210px" placeholder="Ej.: Chaqueta del equipo"></label><button class="btn" data-act="uniart">Agregar artículo</button></div></div></div>'+
+  '<div class="card"><h3>Últimos movimientos de uniformes</h3>'+(hist.length?'<div class="tw"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Canal</th><th class="r">Valor</th><th>Registró</th></tr></thead><tbody>'+hist.map(function(m){return '<tr><td>'+dl(m.date)+'</td><td>'+esc(m.concept)+'</td><td>'+m.channel+'</td><td class="r">'+fmt(m.amount)+'</td><td>'+esc(m.who)+'</td></tr>'}).join('')+'</tbody></table></div>':'<div class="empty">Aún no hay movimientos registrados.</div>')+'</div>';
 }
 function vCrm(){
   var base=S.showOut?students.filter(function(s){return s.out}):act();
-  var rows=base.filter(function(s){return (S.f.g==='Todos'||s.groups.indexOf(S.f.g)>=0)&&(S.f.gen==='Todos'||s.gender===S.f.gen)});
+  var rows=base.filter(function(s){return (!S.multi||s.groups.length+(s.ext||[]).length>1)&&(S.f.g==='Todos'||s.groups.indexOf(S.f.g)>=0)&&(S.f.gen==='Todos'||s.gender===S.f.gen)});
   var nF=rows.filter(function(s){return s.gender==='Femenino'}).length;
   var gsel=GROUPS.map(function(g){return '<option>'+g+'</option>'}).join('');
   var addCard='<div class="card"><h3>Ingresar un alumno</h3><p class="sub">Queda en la base de datos, en su grupo y con la mensualidad del mes por cobrar.</p><div class="row">'+
@@ -812,15 +841,15 @@ function vCrm(){
     '<label class="f">Edad<input id="n-age" type="number" min="3" max="30" value="8" style="width:80px"></label>'+
     '<label class="f">Grupo<select id="n-grp">'+gsel+'</select></label>'+
     '<label class="f">Plan<select id="n-plan">'+['12','8','4','dance'].map(function(p){return '<option value="'+p+'">'+PLAN[p]+' · '+fmt(PRICE[p])+'</option>'}).join('')+'</select></label>'+
-    whoField('w-stu')+'<button class="btn" data-act="addstu">Ingresar alumno</button></div></div>';
+    '<label class="f">Mes de inicio<select id="n-start">'+startOpts('Octubre')+'</select></label>'+whoField('w-stu')+'<button class="btn" data-act="addstu">Ingresar alumno</button></div></div>';
   var tbl=S.showOut?
    '<div class="tw"><table><thead><tr><th>Alumno</th><th>Género</th><th>Grupos</th><th>Fecha de retiro</th><th class="r">Meses que estuvo</th><th>Motivo</th><th>Registró</th><th></th></tr></thead><tbody>'+
    (rows.length?rows.map(function(s){return '<tr><td>'+s.name+'</td><td>'+s.gender+'</td><td>'+s.groups.join(', ')+'</td><td>'+dl(s.out.date)+'</td><td class="r">'+s.out.months+'</td><td>'+s.out.motivo+'</td><td>'+s.out.who+'</td><td><button class="btn sm ghost" data-act="react" data-id="'+s.id+'">Reactivar</button></td></tr>'}).join(''):'<tr><td colspan="8" class="empty">No hay alumnos retirados.</td></tr>')+'</tbody></table></div>':
    '<div class="tw"><table><thead><tr><th>Alumno</th><th>Documento</th><th>Género</th><th>Grupos</th><th>Nivel</th><th class="r">Edad</th><th class="r">Meses en la escuela</th><th>Plan</th><th>Acudientes</th><th></th></tr></thead><tbody>'+
    rows.map(function(s){return '<tr><td>'+s.name+teamPill(s)+'</td><td>'+(s.doc?esc(s.doc):'EJ-'+pad(s.id,4))+'</td><td>'+s.gender+'</td><td>'+s.groups.join(', ')+'</td><td>'+s.groups.map(function(g){return levelOf(s,g)}).join(' / ')+'</td><td class="r">'+s.age+'</td><td class="r">'+s.months+'</td><td>'+PLAN[s.plan]+'</td><td><span class="pill n">Por actualizar</span></td><td><button class="btn sm ghost" data-act="retire" data-id="'+s.id+'">Retirar</button></td></tr>'}).join('')+'</tbody></table></div>';
-  return (S.showOut?'':addCard)+'<div class="card"><h3>'+(S.showOut?'Alumnos retirados':'Base de datos de alumnos')+'</h3><p class="sub">'+(S.showOut?'El historial sirve para medir cuánto permanece un alumno y por qué se va.':'Un solo registro por niño. El documento es el identificador. Pendiente: acudientes, EPS y tallas.')+'</p>'+
+  return '<div class="card"><h3>'+(S.showOut?'Alumnos retirados':'Base de datos de alumnos')+'</h3><p class="sub">'+(S.showOut?'El historial sirve para medir cuánto permanece un alumno y por qué se va.':'Un solo registro por niño. Los alumnos nuevos ingresan por el link de inscripción. Las alumnas en más de un equipo se señalan con una etiqueta. Pendiente: acudientes, EPS y tallas.')+'</p>'+
    '<div class="filters"><label class="f">Grupo<select data-bind="fg2">'+gOpts()+'</select></label><label class="f">Género<select data-bind="fgen2">'+genOpts()+'</select></label>'+
-   '<label style="display:flex;gap:6px;align-items:center;padding-bottom:7px"><input type="checkbox" data-bind="showout"'+(S.showOut?' checked':'')+'>Ver retirados</label><button class="btn ghost" disabled>Descargar en Excel</button></div>'+
+   '<label style="display:flex;gap:6px;align-items:center;padding-bottom:7px"><input type="checkbox" data-bind="showout"'+(S.showOut?' checked':'')+'>Ver retirados</label><label style="display:flex;gap:6px;align-items:center;padding-bottom:7px"><input type="checkbox" data-bind="multi"'+(S.multi?' checked':'')+'>Solo con más de un equipo</label><button class="btn ghost" disabled>Descargar en Excel</button></div>'+
    '<p class="note">'+rows.length+' alumnos · '+nF+' niñas · '+(rows.length-nF)+' niños</p>'+tbl+'</div>';
 }
 function vEscuela(){
@@ -858,7 +887,7 @@ function cafSalidas(){
    '<label class="f">Producto<select data-bind="posp" style="min-width:200px">'+prodOpts(pid,true)+'</select></label>'+
    '<label class="f">Cantidad<input type="number" min="1" style="width:80px" data-bind="posq" value="'+S.pos.q+'"></label>'+
    '<label class="f">Medio de pago<select data-bind="posch">'+CH.concat(['Queda debiendo']).map(function(c){return '<option'+(S.pos.ch===c?' selected':'')+'>'+c+'</option>'}).join('')+'</select></label>'+
-   '<label class="f">Cliente<input data-bind="poscl" value="'+esc(S.pos.cl)+'" placeholder="Obligatorio si debe" style="width:170px"></label>'+
+   '<label class="f">Cliente<select data-bind="posst" style="width:230px"><option value="">Mostrador (sin cliente)</option><optgroup label="Estudiantes">'+act().slice().sort(function(a,b){return a.name.localeCompare(b.name,'es')}).map(function(s){return '<option value="'+esc(s.name)+'"'+(S.pos.sel===s.name?' selected':'')+'>'+esc(s.name)+' · '+s.groups.join(', ')+'</option>'}).join('')+'</optgroup><option value="__otro"'+(S.pos.sel==='__otro'?' selected':'')+'>Otra persona (escribir nombre)</option></select></label>'+(S.pos.sel==='__otro'?'<label class="f">Nombre<input data-bind="poscl" value="'+esc(S.pos.cl)+'" placeholder="Nombre de quien compra" style="width:170px"></label>':'')+
    '<button class="btn" data-act="sell">Registrar salida</button></div><p class="note" style="margin:8px 0 0">Valor de esta salida: <b>'+fmt(tot)+'</b></p></div>'+
   '<div class="card"><h3>Salidas registradas</h3><div class="tw"><table><thead><tr><th>Fecha</th><th>Producto</th><th class="r">Cant.</th><th class="r">Valor</th><th>Cliente</th><th>Pago</th><th>Dónde se refleja</th><th>Registró</th><th></th></tr></thead><tbody>'+
    sales.slice().reverse().map(function(v){return '<tr><td>'+dl(v.date)+'</td><td>'+esc(v.product)+'</td><td class="r">'+v.qty+'</td><td class="r">'+fmt(v.total)+'</td><td>'+esc(v.client)+'</td><td>'+(v.status==='Pagó'?'<span class="pill ok">Pagó · '+v.channel+'</span>':'<span class="pill bad">Debe</span>')+'</td><td>'+(v.status==='Pagó'?'Caja · '+v.channel:'Cartera · pendiente')+'</td><td>'+esc(v.who)+'</td><td>'+(v.status==='Debe'?'<button class="btn sm" data-act="paysale" data-id="'+v.id+'">Cobrar</button>':'')+'</td></tr>'}).join('')+'</tbody></table></div></div>';
@@ -939,7 +968,7 @@ function vCartera(){
   return banner('cartera','Cartera','',null,'3')+
   '<div class="grid kpis">'+kpi('e','Cartera de Dynamic Old Star',fmt(carteraEscTot()),pend.length+' alumnos con saldo')+kpi('g','Cartera de Dynamic GYM',fmt(carteraGymTot()),debts.length+' deudores y '+nWc+' deportistas de Wildcats')+kpi('n','Cartera total',fmt(carteraEscTot()+carteraGymTot()),'Suma de ambas unidades',true)+'</div>'+
   '<div class="grid two"><div class="card"><h3>Dynamic Old Star: mensualidades por cobrar</h3><div class="tw" style="max-height:420px"><table><thead><tr><th>Alumno</th><th>Meses</th><th class="r">Valor</th><th></th></tr></thead><tbody>'+
-  (pend.length?pend.map(function(s){var ms=s.owes.concat(s.out||s.paid?[]:['Octubre']);return '<tr><td>'+s.name+(s.out?' <span class="pill n">Retirado</span>':'')+'</td><td>'+ms.join(', ')+'</td><td class="r">'+fmt(owedOf(s))+'</td><td><button class="btn sm" data-act="pay" data-id="'+s.id+'">Cobrar</button></td></tr>'}).join(''):'<tr><td colspan="4" class="empty">Todo al día.</td></tr>')+'</tbody></table></div></div>'+
+  (pend.length?pend.map(function(s){var ms=s.owes.concat(octDue(s)?['Octubre']:[]);return '<tr><td>'+s.name+(s.out?' <span class="pill n">Retirado</span>':'')+'</td><td>'+ms.join(', ')+'</td><td class="r">'+fmt(owedOf(s))+'</td><td><button class="btn sm" data-act="pay" data-id="'+s.id+'">Cobrar</button></td></tr>'}).join(''):'<tr><td colspan="4" class="empty">Todo al día.</td></tr>')+'</tbody></table></div></div>'+
   '<div class="card"><h3>Dynamic GYM: cuentas por cobrar</h3><div class="tw"><table><thead><tr><th>Deudor</th><th>Concepto</th><th class="r">Valor</th><th></th></tr></thead><tbody>'+
   debts.map(function(d){return '<tr><td>'+esc(d.debtor)+'</td><td>'+esc(d.concept)+'</td><td class="r">'+fmt(d.amount)+'</td><td><button class="btn sm" data-act="paydebt" data-id="'+d.id+'">Cobrar</button></td></tr>'}).join('')+
   (nWc?'<tr><td>Wildcats</td><td>'+nWc+' deportistas con saldo del mes</td><td class="r">'+fmt(wcPendTot())+'</td><td><button class="btn sm ghost" data-act="gowc">Ver detalle</button></td></tr>':'')+
@@ -984,7 +1013,7 @@ function vPerfil(s){
 }
 
 /* ---------- modales ---------- */
-function monthsFor(s){return s.owes.concat(s.paid?[]:['Octubre']).concat(FUT.filter(function(m){return s.adv.indexOf(m)<0}))}
+function monthsFor(s){return s.owes.concat(octDue(s)?['Octubre']:[]).concat(FUT.filter(function(m){return s.adv.indexOf(m)<0&&MSTART.indexOf(m)>=MSTART.indexOf(startOf(s))}))}
 function monthTag(m,s){return s.owes.indexOf(m)>=0?['warn','Atrasado']:(m==='Octubre'?['e','Mes actual']:['i','Anticipo'])}
 function renderModal(){
   var m=S.modal,L=$('#layer');
@@ -1070,7 +1099,7 @@ document.addEventListener('click',function(e){
     p.stock-=q;p.sold+=q;var sale={id:++sid,date:TODAY,product:p.name,cat:p.cat,qty:q,total:tot,client:cl||'Mostrador',status:debe?'Debe':'Pagó',channel:debe?'':S.pos.ch,who:w3};sales.push(sale);
     if(debe){debts.push({id:++did,unit:'gym',cat:'cafeteria',debtor:cl,concept:'Cafetería · '+q+' '+p.name,amount:tot,saleId:sale.id});toast(q+' '+p.name+' pasó a cartera de '+cl+' (registró '+w3+')')}
     else{addMove({date:TODAY,unit:'gym',cat:'cafeteria',concept:'Venta cafetería · '+q+' '+p.name+(cl?' · '+cl:''),channel:S.pos.ch,amount:tot,who:w3});toast('Venta registrada por '+w3+': '+q+' '+p.name+' · '+fmt(tot))}
-    doneWho('w-pos');S.pos.q=1;S.pos.cl='';render();return}
+    doneWho('w-pos');S.pos.q=1;S.pos.cl='';S.pos.sel='';render();return}
   if(a==='entrada'){
     var w4=needWho('w-ent');if(!w4)return;
     var prod=inv.filter(function(x){return x.id===+$('#e-p').value})[0],qn=Math.max(1,Math.floor(+$('#e-q').value||1)),cost=Math.max(0,+$('#e-c').value||0),chn=$('#e-ch').value;
@@ -1136,7 +1165,19 @@ document.addEventListener('click',function(e){
     var w11=needWho('w-stu');if(!w11)return;
     var name=$('#n-name').value.trim();if(!name){toast('Escribe el nombre del alumno.');return}
     var grp=$('#n-grp').value,ns={id:++nextId,name:name,gender:$('#n-gen').value,groups:[grp],level:LEVEL[grp],age:Math.max(3,+$('#n-age').value||8),plan:$('#n-plan').value,months:0,paid:false,info:null,owes:[],adv:[],out:null,ach:emptyAch(),last:0,log:[{date:TODAY,text:'Ingreso al grupo '+grp,who:w11,media:null}]};
-    students.push(ns);doneWho('w-stu');render();toast(name+' ingresó al grupo '+grp+'. Registró '+w11+'.');return}
+    setStart(ns,$('#n-start').value);students.push(ns);doneWho('w-stu');render();toast(name+' ingresó al grupo '+grp+'. Registró '+w11+'.');return}
+  if(a==='unipedido'){var wu=needWho('w-uni');if(!wu)return;var ua=unif[+$('#u-art').value],uq=Math.max(0,Math.floor(+$('#u-q').value||0)),uv=+$('#u-vu').value||0,uab=Math.max(0,+$('#u-ab').value||0),us=stu($('#u-stu').value||0),utot=uq*uv;
+    if(uq<1){toast('Escribe la cantidad.');return}if(!(uv>0)){toast('Escribe el valor por unidad.');return}if(uab>utot){toast('Lo recibido no puede superar el total del pedido ('+fmt(utot)+').');return}
+    ua.ped+=uq;ua.rec+=uab;ua.pend=(ua.pend||0)+(utot-uab);
+    if(uab>0)addMove({date:TODAY,unit:'escuela',cat:'uniforme',concept:'Pedido '+ua.n+' x'+uq+(us?' · '+us.name:'')+(utot>uab?' (saldo '+fmt(utot-uab)+')':''),channel:$('#u-ch').value,amount:uab,who:wu});
+    doneWho('w-uni');render();toast('Pedido registrado por '+wu+': '+uq+' '+ua.n.toLowerCase()+' por '+fmt(utot)+(utot>uab?'. Quedan '+fmt(utot-uab)+' por cobrar.':'.'));return}
+  if(a==='unipago'){var wp=needWho('w-uniprov');if(!wp)return;var up=unif[+$('#up-art').value],uvp=+$('#up-v').value||0;
+    if(!(uvp>0)){toast('Escribe el valor que pagas al proveedor.');return}
+    up.ent+=uvp;addMove({date:TODAY,unit:'escuela',cat:'uniforme',concept:'Pago a proveedor · '+up.n,channel:$('#up-ch').value,amount:-uvp,who:wp});
+    doneWho('w-uniprov');render();toast('Pago al proveedor registrado por '+wp+': '+fmt(uvp));return}
+  if(a==='uniart'){var nn=$('#ua-n').value.trim();if(!nn){toast('Escribe el nombre del artículo.');return}
+    if(unif.some(function(x){return x.n.toLowerCase()===nn.toLowerCase()})){toast('Ese artículo ya está en la lista.');return}
+    unif.push({n:nn,ped:0,rec:0,ent:0});render();toast('Artículo agregado: '+nn);return}
   if(a==='pteam'){S.dep.pg=t.getAttribute('data-g');render();return}
   if(a==='teamadd'){var wt=needWho('w-team');if(!wt)return;var st2=stu(S.dep.sid),ng=$('#t-new').value;ensureAch(st2);st2.groups.push(ng);st2.achG[ng]=emptyAch();st2.log.push({date:TODAY,text:'Ingresó también al equipo '+ng,who:wt,media:null});S.dep.pg=ng;doneWho('w-team');render();toast(st2.name+' ahora está en '+st2.groups.join(' y ')+'. Registró '+wt+'.');return}
   if(a==='teamdel'){var wd=needWho('w-team');if(!wd)return;var st3=stu(S.dep.sid),dg=t.getAttribute('data-g');ensureAch(st3);st3.groups=st3.groups.filter(function(x){return x!==dg});delete st3.achG[dg];st3.ach=achOf(st3,st3.groups[0]);st3.log.push({date:TODAY,text:'Salió del equipo '+dg,who:wd,media:null});S.dep.pg=null;doneWho('w-team');render();toast(st3.name+' salió del equipo '+dg+'. Sus insignias de ese equipo se conservan en el registro.');return}
@@ -1144,7 +1185,7 @@ document.addEventListener('click',function(e){
     if(ic.length<5||ic.length>12){toast('Escribe la cédula del acudiente, solo números.');return}
     if(idc.length<4){toast('Escribe el documento de la estudiante.');return}
     var IL=insLoad();if(IL.some(function(x){return x.ced===ic&&String(x.doc).toUpperCase()===idc.toUpperCase()&&x.status!=='Recibida'})){toast('Ya hay un acceso pendiente con esos datos.');return}
-    var nr={id:'i'+Date.now().toString(36),ced:ic,doc:idc,acu:$('#in-acu').value.trim(),est:$('#in-est').value.trim(),status:'Pendiente',created:TODAY};IL.push(nr);insSave(IL);S.ins.nuevo=nr;render();toast('Acceso creado. Copia el enlace y envíalo.');return}
+    var nr={id:'i'+Date.now().toString(36),ced:ic,doc:idc,acu:$('#in-acu').value.trim(),est:$('#in-est').value.trim(),inicio:$('#in-ini').value==='auto'?'':$('#in-ini').value,status:'Pendiente',created:TODAY};IL.push(nr);insSave(IL);S.ins.nuevo=nr;render();toast('Acceso creado. Copia el enlace y envíalo.');return}
   if(a==='inscopy'){var el=$('#in-link');el.select();try{navigator.clipboard.writeText(el.value).then(function(){toast('Enlace copiado')},function(){document.execCommand('copy');toast('Enlace copiado')})}catch(x){try{document.execCommand('copy');toast('Enlace copiado')}catch(y){toast('Selecciona el enlace y cópialo')}}return}
   if(a==='insver'){S.ins.sel=t.getAttribute('data-sid');render();return}
   if(a==='insdel'){var sid=t.getAttribute('data-sid'),IL2=insLoad().filter(function(x){return x.id!==sid});insSave(IL2);render();toast('Acceso quitado');return}
@@ -1152,8 +1193,13 @@ document.addEventListener('click',function(e){
   if(a==='cvadd'){var cn=$('#cv-n').value.trim();if(!cn){toast('Escribe el nombre de la persona.');return}CR[S.convSel].push({id:++crid,name:cn});render();toast(cn+' ingresó a '+S.convSel);return}
   if(a==='cvdel'){var ls=CR[S.convSel],pp=ls.filter(function(x){return x.id===id})[0];CR[S.convSel]=ls.filter(function(x){return x.id!==id});render();toast(pp.name+' fue retirado de '+S.convSel);return}
   /* campeonatos */
-  if(a==='champ'){S.champ=t.getAttribute('data-id');render();return}
-  if(a==='newchamp'){var nid='c'+(champs.length+1);champs.push({id:nid,name:'Nuevo campeonato',city:'',date:'',fee:0,trip:0,compTrip:0,compPer:3,groups:[],extra:[],out:[],pay:{}});S.champ=nid;render();return}
+  if(a==='champ'){S.champ=t.getAttribute('data-id');S.champDel=null;render();return}
+  if(a==='champdel'){S.champDel=S.champ;render();return}
+  if(a==='champdelno'){S.champDel=null;render();return}
+  if(a==='champdelok'){var wcd=needWho('w-campdel');if(!wcd)return;var cd=curChamp(),nm=cd.name,had=M.filter(function(m){return m.key&&m.key.indexOf('ch:'+cd.id+':')===0}).length;
+    M=M.filter(function(m){return !(m.key&&m.key.indexOf('ch:'+cd.id+':')===0)});champs=champs.filter(function(x){return x.id!==cd.id});S.champ=champs.length?champs[0].id:null;S.champDel=null;doneWho('w-campdel');render();
+    toast('Campeonato "'+nm+'" eliminado por '+wcd+(had?'. También se quitaron '+had+' pagos registrados.':'.'));return}
+  if(a==='newchamp'){var nid='c'+Date.now().toString(36);champs.push({id:nid,name:'Nuevo campeonato',city:'',date:TODAY,fee:0,trip:0,compTrip:0,compPer:3,groups:[],extra:[],out:[],pay:{}});S.champ=nid;render();return}
   if(a==='cadd'){var c1=curChamp(),sid1=+$('#c-add').value;if(c1.out.indexOf(sid1)>=0)c1.out=c1.out.filter(function(x){return x!==sid1});else c1.extra.push(sid1);if(!c1.pay[sid1])c1.pay[sid1]={amount:0,channel:'Efectivo',seed:0};render();return}
   if(a==='cdel'){var c2=curChamp();if(c2.extra.indexOf(id)>=0)c2.extra=c2.extra.filter(function(x){return x!==id});else c2.out.push(id);render();return}
   /* deporte */
@@ -1175,6 +1221,7 @@ document.addEventListener('change',function(e){
   if(b==='fg'||b==='fg2'){S.f.g=t.value;render();return}
   if(b==='fgen'||b==='fgen2'){S.f.gen=t.value;render();return}
   if(b==='fs'){S.f.st=t.value;$('#mt').innerHTML=mensTable();labelTables();return}
+  if(b==='multi'){S.multi=t.checked;render();return}
   if(b==='showout'){S.showOut=t.checked;render();return}
   if(b==='cu'){S.caja.u=t.value;render();return}
   if(b==='dg'){S.dep.g=t.value;render();return}
@@ -1188,6 +1235,8 @@ document.addEventListener('change',function(e){
   if(b==='pch'){S.modal.channel=t.value;return}
   if(b==='rmot'){S.modal.motivo=t.value;return}
   if(b==='wcch'){S.wcCh=t.value;return}
+  if(b==='start'){var ss=stu(+t.getAttribute('data-id'));setStart(ss,t.value);render();toast(ss.name+': la mensualidad empieza en '+t.value.toLowerCase()+'. Se recalcularon los meses por cobrar.');return}
+  if(b==='cf'&&t.type==='date'){curChamp().date=t.value;return}
   if(b==='wcm'||b==='wcr'||b==='wca'){var o=wc.filter(function(x){return x.id===+t.getAttribute('data-id')})[0];
     if(b==='wcm')o.mode=t.value;else if(b==='wcr')o.ride=t.value==='1';else o.att[t.getAttribute('data-d')]=t.value;render();return}
   if(b==='ach'){var wa=needWho('w-ach');if(!wa){render();return}
@@ -1198,6 +1247,7 @@ document.addEventListener('change',function(e){
     if(f.size>20*1024*1024){toast('El archivo pesa más de 20 MB. Elige uno más liviano.');t.value='';return}
     var r=new FileReader();r.onload=function(){S.dep.pending={type:f.type||'image/jpeg',src:r.result,name:f.name};var pv=$('#pv');if(pv)pv.innerHTML=mediaHtml(S.dep.pending)};r.readAsDataURL(f);return}
   var c=curChamp();
+  if(b==='cf'&&t.type==='date')return;
   if(b==='cf'){var k2=t.getAttribute('data-k');c[k2]=(k2==='name'||k2==='city'||k2==='date')?t.value:Math.max(0,+t.value||0);render();return}
   if(b==='cg'){var g=t.getAttribute('data-g');c.groups=GROUPS.filter(function(x){return x===g?t.checked:c.groups.indexOf(x)>=0});
     rosterOf(c).forEach(function(s3){if(!c.pay[s3.id])c.pay[s3.id]={amount:0,channel:'Efectivo',seed:0}});render();return}
@@ -1206,11 +1256,15 @@ document.addEventListener('change',function(e){
     if(b==='cp')c.pay[sid3].amount=Math.max(0,+t.value||0);else c.pay[sid3].channel=t.value;
     syncChampMove(c,sid3,wcmp);render();toast('Pago de campeonato actualizado por '+wcmp);return}
 });
+document.addEventListener('focusout',function(e){var t=e.target;if(!t.getAttribute||t.getAttribute('data-bind')!=='cf'||t.type!=='date')return;
+  var y=+(t.value||'0').slice(0,4),Y=+TODAY.slice(0,4),c=curChamp();if(!c||!t.value)return;
+  if(y<Y-1||y>Y+1){c.date=Y+t.value.slice(4);t.value=c.date;toast('El año se ajustó a '+Y+'. Revisa la fecha.')}else{c.date=t.value}});
 document.addEventListener('input',function(e){
   var t=e.target,b=t.getAttribute('data-bind');
   if(b==='who'){S.who[t.getAttribute('data-w')]=t.value;return}
   if(b==='insf'){S.ins.f[t.getAttribute('data-k')]=t.value;render();return}
   if(b==='fq'){S.f.q=t.value;$('#mt').innerHTML=mensTable();labelTables();return}
+  if(b==='posst'){S.pos.sel=t.value;S.pos.cl=t.value==='__otro'?'':t.value;render();return}
   if(b==='poscl'){S.pos.cl=t.value;return}
   if(b==='posq'){S.pos.q=t.value;return}
   if(t.id==='i-q'||t.id==='i-tipo'){var tp=ING.filter(function(x){return x[0]===$('#i-tipo').value})[0];$('#i-tot').textContent=fmt(tp[2]*Math.max(1,+$('#i-q').value||1))}
