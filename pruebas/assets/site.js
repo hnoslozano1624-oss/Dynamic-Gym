@@ -58,7 +58,3 @@ function boot(){size();var q=[];for(var i=1;i<n;i++)q.push(i);var run=0;
 addEventListener('scroll',req,{passive:true});addEventListener('resize',function(){size()});
 load(0,function(){size();var go=function(){boot()};(window.requestIdleCallback||function(f){setTimeout(f,300)})(go)});
 }catch(e){}})();
-
-/* Botón Deportistas: un aviso suave solo en la primera página de cada visita */
-(function(){try{var b=document.querySelector('.btn-dep');if(!b||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-if(sessionStorage.getItem('depAttn'))return;sessionStorage.setItem('depAttn','1');b.classList.add('attn')}catch(e){}})();
