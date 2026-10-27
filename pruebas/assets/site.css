@@ -585,7 +585,7 @@ section.dark.tex::after{content:"";position:absolute;inset:0;z-index:-1;pointer-
 
 /* Portada con secuencia por scroll (solo si existen los fotogramas) */
 .lv-track{background:#01164A}
-.lv-cv{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0}
+.lv-cv{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity 300ms ease}
 .lv-cv.on{opacity:1}
 .lv-track.pin .hero.live{position:sticky;z-index:1}
 @media (prefers-reduced-motion:reduce){.lv-cv{display:none}}
@@ -615,3 +615,26 @@ section.dark.tex::after{content:"";position:absolute;inset:0;z-index:-1;pointer-
  .hero:has(img.bg[src$="dynamic-gym-hero.jpg"]) .lede{max-width:16em}
  .hero:has(img.bg[src$="dynamic-gym-hero.jpg"]) h1,.hero:has(img.bg[src$="dynamic-gym-hero.jpg"]) .lede{text-shadow:0 2px 18px rgba(1,12,48,.75),0 0 3px rgba(1,12,48,.5)}
 }
+
+@media (min-width:701px){.lv-stage img{object-position:90% center}}
+
+/* El gimnasio conserva su tamaño y proporción; el espacio que sobra arriba se funde con el azul de la portada */
+@media (min-width:701px){.lv-track.fill .lv-stage{inset:auto 0 0 0;height:auto;aspect-ratio:2.5/1;max-height:100%;-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 26%);mask-image:linear-gradient(180deg,transparent 0,#000 26%)}}
+
+/* Luz azul en fichas con zoom: resplandor de fondo + luz que sigue al cursor */
+.card.pic{position:relative}
+@media (hover:hover) and (pointer:fine){
+ a.card.pic{transition:transform .15s,border-color .15s,box-shadow 250ms cubic-bezier(0.23,1,0.32,1)}
+ a.card.pic:hover{border-color:#4696FF;box-shadow:0 0 0 1px rgba(70,150,255,.55),0 12px 46px rgba(40,120,255,.5),0 0 90px rgba(40,120,255,.28)}
+}
+@media (prefers-reduced-motion:reduce){a.card.pic{transition:none}}
+.pic-star{position:absolute;left:0;top:0;width:16px;height:16px;z-index:4;pointer-events:none;opacity:0;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);will-change:transform,opacity}
+
+/* Resplandor azul en todas las fichas de la web (excepto medallas, que conservan su luz dorada/plata/bronce) */
+.card:not(.medal){transition:transform .25s,border-color .25s,box-shadow 250ms cubic-bezier(0.23,1,0.32,1)}
+@media (hover:hover) and (pointer:fine){
+ .card:not(.medal):hover{border-color:#4696FF!important;box-shadow:0 0 0 1px rgba(70,150,255,.55),0 12px 46px rgba(40,120,255,.5),0 0 90px rgba(40,120,255,.28)!important}
+}
+@media (prefers-reduced-motion:reduce){.card:not(.medal){transition:none}}
+
+.card:not(.medal){position:relative;overflow:clip}
