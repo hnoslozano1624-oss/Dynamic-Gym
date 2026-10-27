@@ -574,10 +574,10 @@ section.dark.tex::after{content:"";position:absolute;inset:0;z-index:-1;pointer-
 @keyframes lv-spark{0%{opacity:0;transform:translate3d(0,24px,0) scale(.5)}15%{opacity:.95}60%{opacity:.8}100%{opacity:0;transform:translate3d(8px,-130px,0) scale(1.1)}}
 @media (max-width:700px){
  .hero.live{display:grid;grid-template-columns:1fr;align-items:start}
- .hero.live .wrap{order:1;padding:36px 20px 24px}
- .lv-stage{position:relative;inset:auto;order:2;height:min(62vw,300px)}
+ .hero.live .wrap{order:2;padding:18px 20px 28px}
+ .lv-stage{position:relative;inset:auto;order:1;height:min(62vw,300px)}
  .lv-stage img{object-position:96% center}
- .lv-stage::after{background:linear-gradient(180deg,#01164A 0,rgba(1,22,74,0) 30%)}
+ .lv-stage::after{background:linear-gradient(0deg,#01164A 0,rgba(1,22,74,0) 32%)}
  .lv-sparks i:nth-child(n+7){display:none}
  .lv-rays i:nth-child(n+4){display:none}
 }
@@ -619,7 +619,7 @@ section.dark.tex::after{content:"";position:absolute;inset:0;z-index:-1;pointer-
 @media (min-width:701px){.lv-stage img{object-position:90% center}}
 
 /* El gimnasio conserva su tamaño y proporción; el espacio que sobra arriba se funde con el azul de la portada */
-@media (min-width:701px){.lv-track.fill .lv-stage{inset:auto 0 0 0;height:auto;aspect-ratio:2.5/1;max-height:100%;-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 26%);mask-image:linear-gradient(180deg,transparent 0,#000 26%)}}
+@media (min-width:701px){.lv-track.fill .lv-stage{inset:auto 0 0 0;width:100%;height:auto;aspect-ratio:2.5/1;max-height:100%;-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 24%,#000 95%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0,#000 24%,#000 95%,transparent 100%)}}
 
 /* Luz azul en fichas con zoom: resplandor de fondo + luz que sigue al cursor */
 .card.pic{position:relative}

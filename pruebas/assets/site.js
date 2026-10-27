@@ -40,13 +40,18 @@ var cx=cv.getContext('2d');if(!cx)return;
 var fr=[],shown=-1,pinned=false,navH=0,W=0,H=0,fx=.72,raf=0,pos=0,tgt=0,ready=false;
 function url(i){return pat.replace('%02d',('0'+i).slice(-2))}
 function load(i,cb){if(fr[i])return cb&&cb();var m=new Image();m.decoding='async';m.onload=function(){fr[i]=m;cb&&cb()};m.onerror=function(){cb&&cb()};m.src=url(i)}
+var pb=document.createElement('div');pb.style.cssText='position:fixed;left:0;top:0;width:0;height:100svh;visibility:hidden;pointer-events:none';document.body.appendChild(pb);
+function vh(){var h=pb.offsetHeight;return h>200?h:window.innerHeight}
+var lw=innerWidth;
 function size(){var r=stage.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2);W=Math.round(r.width*d);H=Math.round(r.height*d);cv.width=W;cv.height=H;
  var op=(getComputedStyle(img).objectPosition||'72% 50%').split(' ')[0];fx=mob?.7:parseFloat(op)/100;if(!(fx>=0&&fx<=1))fx=.72;
  var nh=document.querySelector('header.nav');navH=nh?nh.offsetHeight:0;
- hero.style.minHeight='';pinned=(hero.offsetHeight+navH)<=window.innerHeight;
- var fill=pinned&&!mob;if(fill)hero.style.minHeight=Math.max(hero.offsetHeight,Math.min(window.innerHeight-navH,hero.offsetHeight+120))+'px';
+ hero.style.minHeight='';
+ if(mob){stage.style.height='';var nat=stage.offsetHeight,wh=hero.offsetHeight-nat,av=vh()-navH-wh-2;if(av<nat&&av>=190){stage.style.height=av+'px';W=Math.round(stage.getBoundingClientRect().width*Math.min(window.devicePixelRatio||1,2));H=Math.round(av*Math.min(window.devicePixelRatio||1,2));cv.width=W;cv.height=H}}
+ pinned=(hero.offsetHeight+navH)<=vh();
+ var fill=pinned&&!mob;if(fill)hero.style.minHeight=Math.max(hero.offsetHeight,Math.min(vh()-navH,Math.round(stage.getBoundingClientRect().width/2.5*1.15)))+'px';
  tr.classList.toggle('fill',fill);
- var extra=pinned?Math.round(Math.min(window.innerHeight*2.4,2200)):0;
+ var extra=pinned?Math.round(Math.min(vh()*2.4,2200)):0;
  tr.style.height=(hero.offsetHeight+extra)+'px';tr.classList.toggle('pin',pinned);hero.style.top=navH+'px';shown=-1;target();loop()}
 function draw(i){var m=fr[i];if(!m)for(var k=i;k>=0&&!m;k--)m=fr[k];if(!m)return;
  var s=Math.max(W/m.naturalWidth,H/m.naturalHeight),w=m.naturalWidth*s,h=m.naturalHeight*s;
@@ -62,7 +67,7 @@ function loop(){raf=0;var d=tgt-pos;pos=Math.abs(d)<.0008?tgt:pos+d*.2;var i=Mat
 function req(){target();if(!raf)raf=requestAnimationFrame(loop)}
 function boot(){size();var q=[];for(var i=1;i<n;i++)q.push(i);var run=0;
  (function pump(){while(run<4&&q.length){run++;load(q.shift(),function(){run--;pump();if(!raf)raf=requestAnimationFrame(loop)})}})()}
-addEventListener('scroll',req,{passive:true});addEventListener('resize',function(){size()});
+addEventListener('scroll',req,{passive:true});addEventListener('resize',function(){if(innerWidth===lw)return;lw=innerWidth;size()});
 load(0,function(){size();ready=true;(window.requestIdleCallback||function(f){setTimeout(f,200)})(boot)});
 }catch(e){}})();
 (function(){try{
