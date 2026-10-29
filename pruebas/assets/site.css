@@ -694,3 +694,22 @@ section.dark.tex::after{content:"";position:absolute;inset:0;z-index:-1;pointer-
 @media (min-width:1101px){.hero.full>img.bg[src$="niveles-hero.jpg"]{right:-5%;width:64%}}
 @media (min-width:701px) and (max-width:1100px){.hero.full>img.bg[src$="niveles-hero.jpg"]{width:80%;right:-4%}.hero.full:has(img[src$="niveles-hero.jpg"]) .wrap>*{max-width:50%}}
 @media (min-width:701px) and (max-width:1100px){.hero.full>img.bg[src$="niveles-hero.jpg"]{object-position:42% center;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 26%);mask-image:linear-gradient(90deg,transparent 0,#000 26%)}}
+
+/* Celular y tableta: en todas las páginas el banner va primero y el texto debajo */
+@media (max-width:1024px){
+ .hero:not(.live){--hh:min(56vw,340px);padding-top:var(--hh)}
+ .hero:not(.live)>img.bg,.hero:not(.live) .confetti{position:absolute!important;top:0!important;bottom:auto!important;left:0!important;right:0!important;width:100%!important;height:var(--hh)!important;margin:0!important;aspect-ratio:auto!important;transform:none!important;object-fit:cover!important;object-position:center 30%!important;-webkit-mask-image:linear-gradient(180deg,#000 0,#000 62%,transparent 100%)!important;mask-image:linear-gradient(180deg,#000 0,#000 62%,transparent 100%)!important}
+ .hero:not(.live) .confetti{-webkit-mask-image:none!important;mask-image:none!important;overflow:hidden}
+ .hero:not(.live)::after{display:none!important}
+ .hero:not(.live) .wrap{min-height:0!important;padding:8px clamp(16px,4vw,32px) 36px!important;justify-content:flex-start}
+ .hero:not(.live) .wrap>*,.hero:not(.live) .lede,.hero:not(.live) h1{max-width:none!important}
+ .hero:not(.live) h1,.hero:not(.live) .lede,.hero:not(.live) .eyebrow{text-shadow:none!important}
+ .hero:not(.live) .lede{max-width:38em!important}
+ .hero:not(.live)>img.bg[src$="niveles-hero.jpg"]{object-position:center 28%!important}
+ /* portada con video: el banner arriba y el texto debajo también en tableta */
+ .hero.live{display:grid;grid-template-columns:1fr;align-items:start;min-height:0}
+ .hero.live .wrap{order:2;padding:18px clamp(16px,4vw,32px) 32px}
+ .lv-stage{position:relative!important;inset:auto!important;order:1;width:100%!important;height:auto!important;aspect-ratio:2.5/1;max-height:none;-webkit-mask-image:none!important;mask-image:none!important}
+ .lv-stage::after{background:linear-gradient(0deg,#01164A 0,rgba(1,22,74,0) 32%)}
+}
+@media (max-width:700px){.hero.live .lv-stage{aspect-ratio:auto;height:min(62vw,300px)!important}.hero:not(.live){--hh:min(60vw,250px)}}

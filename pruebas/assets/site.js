@@ -53,7 +53,7 @@ function size(){var r=stage.getBoundingClientRect(),d=Math.min(window.devicePixe
  var fill=pinned&&!mob;if(fill)hero.style.minHeight=Math.max(hero.offsetHeight,Math.min(vh()-navH,Math.round(stage.getBoundingClientRect().width/2.5*1.15)))+'px';
  tr.classList.toggle('fill',fill);
  var extra=pinned?Math.round(Math.min(vh()*2.4,2200)):0;
- tr.style.height=(hero.offsetHeight+extra)+'px';tr.classList.toggle('pin',pinned);hero.style.top=navH+'px';shown=-1;target();loop()}
+ tr.style.height=(hero.offsetHeight+extra)+'px';tr.classList.toggle('pin',pinned);hero.style.top=pinned?navH+'px':'';shown=-1;target();loop()}
 function draw(i){var m=fr[i];if(!m)for(var k=i;k>=0&&!m;k--)m=fr[k];if(!m)return;
  var s=Math.max(W/m.naturalWidth,H/m.naturalHeight),w=m.naturalWidth*s,h=m.naturalHeight*s;
  cx.drawImage(m,(W-w)*fx,(H-h)/2,w,h);cv.classList.add('on')}
