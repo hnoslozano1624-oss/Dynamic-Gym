@@ -67,17 +67,22 @@ function loop(){raf=0;var d=tgt-pos;pos=Math.abs(d)<.0008?tgt:pos+d*.2;var i=Mat
  if(pos!==tgt)raf=requestAnimationFrame(loop)}
 function req(){if(auto)return;target();if(!raf)raf=requestAnimationFrame(loop)}
 /* Celular y tableta: el movimiento se reproduce solo, en bucle de ida y vuelta (sin depender del scroll) */
-var ar=0,at0=0,vis=true,go=false,loaded=0;
-function aframe(t){ar=0;if(!go||!vis||document.hidden)return;if(!at0)at0=t;
- var fps=20,c=2*(n-1),k=Math.floor((t-at0)/1000*fps)%c,i=k<n?k:c-k;
- if(i!==shown){shown=i;draw(i)}ar=requestAnimationFrame(aframe)}
-function astart(){if(go)return;go=true;at0=0;if(!ar)ar=requestAnimationFrame(aframe)}
-if(auto){if('IntersectionObserver' in window)new IntersectionObserver(function(es){vis=es[0].isIntersecting;if(vis&&go&&!ar){at0=0;ar=requestAnimationFrame(aframe)}}).observe(hero);
- document.addEventListener('visibilitychange',function(){if(!document.hidden&&go&&!ar){at0=0;ar=requestAnimationFrame(aframe)}})}
+var ar=0,al=0,vis=true,go=false,ap=0,adir=1,okc=0,fps=n/7.97;/* misma cadencia del video original: 7,97 s para toda la secuencia */
+function aframe(t){ar=0;if(!go||!vis||document.hidden){al=0;return}
+ if(!al)al=t;var dt=Math.min(t-al,100)/1000;al=t;while(fr[okc])okc++;
+ var np=ap+adir*fps*dt;
+ if(adir>0&&np>=n-1){np=n-1;adir=-1}else if(adir<0&&np<=0){np=0;adir=1}
+ if(np>okc-1)np=Math.max(0,okc-1);/* si los fotogramas aún cargan, espera en el último disponible */
+ ap=np;var i=Math.floor(ap),f=ap-i;draw(i);
+ if(f>.03&&fr[i+1]){cx.globalAlpha=f;draw(i+1);cx.globalAlpha=1}/* mezcla entre fotogramas para que el movimiento sea fluido */
+ shown=i;ar=requestAnimationFrame(aframe)}
+function astart(){if(go)return;go=true;al=0;if(!ar)ar=requestAnimationFrame(aframe)}
+if(auto){if('IntersectionObserver' in window)new IntersectionObserver(function(es){vis=es[0].isIntersecting;if(vis&&go&&!ar){al=0;ar=requestAnimationFrame(aframe)}}).observe(hero);
+ document.addEventListener('visibilitychange',function(){if(!document.hidden&&go&&!ar){al=0;ar=requestAnimationFrame(aframe)}})}
 function boot(){size();var q=[];for(var i=1;i<n;i++)q.push(i);var run=0;
- (function pump(){while(run<4&&q.length){run++;load(q.shift(),function(){run--;loaded++;pump();if(auto){if(loaded>=n-1||loaded>=12&&!q.length)astart()}else if(!raf)raf=requestAnimationFrame(loop)})}})()}
-addEventListener('scroll',req,{passive:true});if(auto)setTimeout(function(){if(!go&&loaded>8)astart()},4000);addEventListener('resize',function(){if(innerWidth===lw)return;lw=innerWidth;size()});
-load(0,function(){size();ready=true;(window.requestIdleCallback||function(f){setTimeout(f,200)})(boot)});
+ (function pump(){while(run<6&&q.length){run++;load(q.shift(),function(){run--;pump();if(!auto&&!raf)raf=requestAnimationFrame(loop)})}})()}
+addEventListener('scroll',req,{passive:true});addEventListener('resize',function(){if(innerWidth===lw)return;lw=innerWidth;size()});
+load(0,function(){size();ready=true;if(auto)astart();(window.requestIdleCallback||function(f){setTimeout(f,200)})(boot)});
 }catch(e){}})();
 (function(){try{
 if(!matchMedia('(hover:hover) and (pointer:fine)').matches||matchMedia('(prefers-reduced-motion: reduce)').matches||!Element.prototype.animate)return;
