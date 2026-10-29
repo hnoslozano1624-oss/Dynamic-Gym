@@ -685,3 +685,8 @@ section.dark.tex::after{content:"";position:absolute;inset:0;z-index:-1;pointer-
 .camp .puesto.oro{background:#FFE9A6;color:#5C3D00}.camp .puesto.bronce{background:#F6DCC4;color:#6A3A12}
 .camp .shield{position:relative;display:block;padding:0;overflow:hidden}
 .camp .shield img{position:absolute;inset:8px;width:calc(100% - 16px);height:calc(100% - 16px);max-width:none;object-fit:contain}
+
+.camp h3{min-height:2.6em;display:flex;align-items:center;justify-content:center}
+.camp .puesto{margin-top:auto}
+.camp dl{margin-bottom:6px}
+.camp .puesto.plata{background:#E3E8F0;color:#3B4658}
