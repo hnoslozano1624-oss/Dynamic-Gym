@@ -348,20 +348,20 @@ footer .copy a{color:inherit;text-decoration:underline}
 /* trofeos reales: fotos sobre fondo blanco, proporción 4:5 sin recortar */
 .mq{background:#fff}
 .mq-i{padding:0 14px}
-.mq-i img[src*="img/trofeos/"]{height:300px;aspect-ratio:4/5;object-fit:contain;background:#fff;box-shadow:none;border-radius:0}
-@media (max-width:700px){.mq-i img[src*="img/trofeos/"]{height:220px}}
-.mq-i img[src*="img/trofeos/"]{mix-blend-mode:multiply}
+.mq-i img[src*="img/trofeos/"],.mq-i img[src*="img/medallas/"]{height:300px;aspect-ratio:4/5;object-fit:contain;background:#fff;box-shadow:none;border-radius:0}
+@media (max-width:700px){.mq-i img[src*="img/trofeos/"],.mq-i img[src*="img/medallas/"]{height:220px}}
+.mq-i img[src*="img/trofeos/"],.mq-i img[src*="img/medallas/"]{mix-blend-mode:multiply}
 
 /* cada trofeo en su propio marco */
 .mq{background:#F4F7FD;padding:22px 0}
 .mq-i{padding:0 11px}
-.mq-i img[src*="img/trofeos/"]{mix-blend-mode:normal;background:#fff;border-radius:16px;box-shadow:0 6px 18px rgba(1,22,74,.16);border:1px solid #DCE4F2;padding:10px;box-sizing:content-box}
+.mq-i img[src*="img/trofeos/"],.mq-i img[src*="img/medallas/"]{mix-blend-mode:normal;background:#fff;border-radius:16px;box-shadow:0 6px 18px rgba(1,22,74,.16);border:1px solid #DCE4F2;padding:10px;box-sizing:content-box}
 
 /* trofeos recortados sobre la línea gráfica azul de la página */
 .mq{background:linear-gradient(180deg,#0160D8 0,#0A3A9A 55%,#062A78 100%);border-block:0;padding:26px 0 30px}
 .mq-i{padding:0 10px}
-.mq-i img[src*="img/trofeos/"]{mix-blend-mode:normal;box-sizing:border-box;height:310px;width:auto;aspect-ratio:auto;min-width:190px;object-fit:contain;padding:18px 20px 14px;background:radial-gradient(ellipse at 50% 38%,rgba(255,255,255,.28) 0,rgba(255,255,255,.06) 62%),rgba(1,22,74,.35);border:1px solid rgba(255,255,255,.28);border-radius:18px;box-shadow:0 10px 26px rgba(0,10,40,.45);filter:drop-shadow(0 8px 10px rgba(0,0,0,.35))}
-@media (max-width:700px){.mq-i img[src*="img/trofeos/"]{height:230px;min-width:140px;padding:12px 14px 10px}}
+.mq-i img[src*="img/trofeos/"],.mq-i img[src*="img/medallas/"]{mix-blend-mode:normal;box-sizing:border-box;height:310px;width:auto;aspect-ratio:auto;min-width:190px;object-fit:contain;padding:18px 20px 14px;background:radial-gradient(ellipse at 50% 38%,rgba(255,255,255,.28) 0,rgba(255,255,255,.06) 62%),rgba(1,22,74,.35);border:1px solid rgba(255,255,255,.28);border-radius:18px;box-shadow:0 10px 26px rgba(0,10,40,.45);filter:drop-shadow(0 8px 10px rgba(0,0,0,.35))}
+@media (max-width:700px){.mq-i img[src*="img/trofeos/"],.mq-i img[src*="img/medallas/"]{height:230px;min-width:140px;padding:12px 14px 10px}}
 
 /* tarjetas de unidad con imagen */
 .unit.pic{border-top-width:0;position:relative}
@@ -658,3 +658,20 @@ section.dark.tex::after{content:"";position:absolute;inset:0;z-index:-1;pointer-
 @media (prefers-reduced-motion:no-preference){.btn-dep::after{animation:dep-glow 2.4s ease-in-out infinite}}
 @keyframes dep-glow{0%,100%{opacity:.32;transform:scale(1)}50%{opacity:.75;transform:scale(1.14)}}
 @media (hover:hover) and (pointer:fine){.btn-dep:hover::after{animation:none;opacity:.85;transform:scale(1.12)}}
+
+.medgal{margin-top:56px;text-align:center}
+.medgal h3{color:#fff;font-size:clamp(18px,2.4vw,24px);margin:0 0 28px}
+.medgal ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:34px 22px;align-items:end}
+.medgal li{display:flex;flex-direction:column;align-items:center;gap:12px}
+.medgal img{width:100%;max-width:190px;height:170px;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45));transition:transform .3s cubic-bezier(.23,1,.32,1)}
+.medgal span{color:rgba(255,255,255,.88);font-size:13px;line-height:1.35;max-width:190px}
+@media (hover:hover) and (pointer:fine){.medgal li:hover img{transform:translateY(-6px) scale(1.07)}}
+@media (max-width:900px){.medgal ul{grid-template-columns:repeat(3,1fr);gap:28px 14px}}
+@media (max-width:560px){.medgal ul{grid-template-columns:repeat(2,1fr)}.medgal img{height:140px}}
+@media (prefers-reduced-motion:reduce){.medgal img{transition:none}}
+
+.mq-med{margin-top:34px;border-radius:20px;overflow:hidden}
+.mq-med .mq-track{animation-duration:80s}
+.mq-med{padding:18px 0 20px}
+.mq-i img[src*="img/medallas/"]{height:155px;min-width:95px;padding:9px 10px 7px;border-radius:14px}
+@media (max-width:700px){.mq-i img[src*="img/medallas/"]{height:115px;min-width:70px;padding:6px 7px 5px;border-radius:12px}.mq-med{padding:14px 0 16px}}

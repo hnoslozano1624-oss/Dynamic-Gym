@@ -32,6 +32,7 @@ els.forEach(function(e){io.observe(e);var c=e.parentNode;c.addEventListener('cli
 (function(){try{
 var tr=document.querySelector('.lv-track[data-seq]');if(!tr)return;
 if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+var auto=matchMedia('(max-width:1024px), (pointer:coarse) and (max-width:1366px)').matches;
 var mob=matchMedia('(max-width:700px)').matches&&+tr.dataset.nM>=8;
 var n=mob?+tr.dataset.nM:+tr.dataset.n,pat=mob?tr.dataset.seqM:tr.dataset.seq;
 var hero=tr.querySelector('.hero.live'),stage=tr.querySelector('.lv-stage'),img=stage.querySelector('img');
@@ -48,7 +49,7 @@ function size(){var r=stage.getBoundingClientRect(),d=Math.min(window.devicePixe
  var nh=document.querySelector('header.nav');navH=nh?nh.offsetHeight:0;
  hero.style.minHeight='';
  if(mob){stage.style.height='';var nat=stage.offsetHeight,wh=hero.offsetHeight-nat,av=vh()-navH-wh-2;if(av<nat&&av>=190){stage.style.height=av+'px';W=Math.round(stage.getBoundingClientRect().width*Math.min(window.devicePixelRatio||1,2));H=Math.round(av*Math.min(window.devicePixelRatio||1,2));cv.width=W;cv.height=H}}
- pinned=(hero.offsetHeight+navH)<=vh();
+ pinned=!auto&&(hero.offsetHeight+navH)<=vh();
  var fill=pinned&&!mob;if(fill)hero.style.minHeight=Math.max(hero.offsetHeight,Math.min(vh()-navH,Math.round(stage.getBoundingClientRect().width/2.5*1.15)))+'px';
  tr.classList.toggle('fill',fill);
  var extra=pinned?Math.round(Math.min(vh()*2.4,2200)):0;
@@ -64,10 +65,18 @@ function target(){tgt=Math.max(0,Math.min(1,prog()))}
 function loop(){raf=0;var d=tgt-pos;pos=Math.abs(d)<.0008?tgt:pos+d*.2;var i=Math.round(pos*(n-1));
  if(i!==shown){shown=i;draw(i);if(!fr[i])load(i,function(){if(shown===i)draw(i)})}
  if(pos!==tgt)raf=requestAnimationFrame(loop)}
-function req(){target();if(!raf)raf=requestAnimationFrame(loop)}
+function req(){if(auto)return;target();if(!raf)raf=requestAnimationFrame(loop)}
+/* Celular y tableta: el movimiento se reproduce solo, en bucle de ida y vuelta (sin depender del scroll) */
+var ar=0,at0=0,vis=true,go=false,loaded=0;
+function aframe(t){ar=0;if(!go||!vis||document.hidden)return;if(!at0)at0=t;
+ var fps=20,c=2*(n-1),k=Math.floor((t-at0)/1000*fps)%c,i=k<n?k:c-k;
+ if(i!==shown){shown=i;draw(i)}ar=requestAnimationFrame(aframe)}
+function astart(){if(go)return;go=true;at0=0;if(!ar)ar=requestAnimationFrame(aframe)}
+if(auto){if('IntersectionObserver' in window)new IntersectionObserver(function(es){vis=es[0].isIntersecting;if(vis&&go&&!ar){at0=0;ar=requestAnimationFrame(aframe)}}).observe(hero);
+ document.addEventListener('visibilitychange',function(){if(!document.hidden&&go&&!ar){at0=0;ar=requestAnimationFrame(aframe)}})}
 function boot(){size();var q=[];for(var i=1;i<n;i++)q.push(i);var run=0;
- (function pump(){while(run<4&&q.length){run++;load(q.shift(),function(){run--;pump();if(!raf)raf=requestAnimationFrame(loop)})}})()}
-addEventListener('scroll',req,{passive:true});addEventListener('resize',function(){if(innerWidth===lw)return;lw=innerWidth;size()});
+ (function pump(){while(run<4&&q.length){run++;load(q.shift(),function(){run--;loaded++;pump();if(auto){if(loaded>=n-1||loaded>=12&&!q.length)astart()}else if(!raf)raf=requestAnimationFrame(loop)})}})()}
+addEventListener('scroll',req,{passive:true});if(auto)setTimeout(function(){if(!go&&loaded>8)astart()},4000);addEventListener('resize',function(){if(innerWidth===lw)return;lw=innerWidth;size()});
 load(0,function(){size();ready=true;(window.requestIdleCallback||function(f){setTimeout(f,200)})(boot)});
 }catch(e){}})();
 (function(){try{
