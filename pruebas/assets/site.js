@@ -45,7 +45,7 @@ var pb=document.createElement('div');pb.style.cssText='position:fixed;left:0;top
 function vh(){var h=pb.offsetHeight;return h>200?h:window.innerHeight}
 var lw=innerWidth;
 function size(){var r=stage.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2);W=Math.round(r.width*d);H=Math.round(r.height*d);cv.width=W;cv.height=H;
- var op=(getComputedStyle(img).objectPosition||'72% 50%').split(' ')[0];fx=mob?.7:parseFloat(op)/100;if(!(fx>=0&&fx<=1))fx=.72;
+ var op=(getComputedStyle(img).objectPosition||'72% 50%').split(' ')[0];fx=mob?.86:parseFloat(op)/100;if(!(fx>=0&&fx<=1))fx=.72;
  var nh=document.querySelector('header.nav');navH=nh?nh.offsetHeight:0;
  hero.style.minHeight='';
  if(mob){stage.style.height='';var nat=stage.offsetHeight,wh=hero.offsetHeight-nat,av=vh()-navH-wh-2;if(av<nat&&av>=190){stage.style.height=av+'px';W=Math.round(stage.getBoundingClientRect().width*Math.min(window.devicePixelRatio||1,2));H=Math.round(av*Math.min(window.devicePixelRatio||1,2));cv.width=W;cv.height=H}}

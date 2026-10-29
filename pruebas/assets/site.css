@@ -678,3 +678,10 @@ section.dark.tex::after{content:"";position:absolute;inset:0;z-index:-1;pointer-
 .lv-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity 300ms ease;max-width:none}
 .lv-vid.on{opacity:1}
 @media (prefers-reduced-motion:reduce){.lv-vid{display:none}}
+
+/* escudos de los torneos sobre baldosa azul */
+.camp .shield{width:100%;height:132px;padding:14px;box-sizing:border-box;border-radius:16px;background:radial-gradient(ellipse at 50% 35%,#0A3A9A 0,#01164A 78%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.camp .shield img{filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}
+.camp .puesto.oro{background:#FFE9A6;color:#5C3D00}.camp .puesto.bronce{background:#F6DCC4;color:#6A3A12}
+.camp .shield{position:relative;display:block;padding:0;overflow:hidden}
+.camp .shield img{position:absolute;inset:8px;width:calc(100% - 16px);height:calc(100% - 16px);max-width:none;object-fit:contain}
