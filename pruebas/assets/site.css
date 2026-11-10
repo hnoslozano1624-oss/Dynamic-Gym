@@ -733,3 +733,5 @@ section.dark.tex::after{content:"";position:absolute;inset:0;z-index:-1;pointer-
  .hero:has(video.bg) h1,.hero:has(video.bg) .lede,.hero:has(video.bg) .eyebrow{text-shadow:0 2px 18px rgba(1,12,48,.8),0 0 3px rgba(1,12,48,.5)}
 }
 @media (min-width:1025px){.hero>video.bg{width:122%;right:auto;object-position:50% 64%}}
+
+.mapbox{margin-top:24px;border-radius:16px;overflow:hidden;border:1px solid var(--line);box-shadow:0 4px 14px rgba(1,22,74,.12)}.mapbox iframe{display:block;width:100%;height:320px;border:0}@media (max-width:700px){.mapbox iframe{height:260px}}
