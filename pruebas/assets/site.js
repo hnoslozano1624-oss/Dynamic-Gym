@@ -107,3 +107,6 @@ document.addEventListener('pointerover',function(e){var c=e.target.closest&&e.ta
   an.onfinish=(function(el){return function(){el.remove()}})(s)}
 },{passive:true});
 }catch(e){}})();
+
+/* Videos de banner: sin movimiento si la persona lo pidió en su dispositivo */
+(function(){try{if(matchMedia('(prefers-reduced-motion: reduce)').matches){document.querySelectorAll('video.bg').forEach(function(v){v.removeAttribute('autoplay');v.pause()})}}catch(e){}})();
