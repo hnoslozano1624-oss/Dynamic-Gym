@@ -735,3 +735,6 @@ section.dark.tex::after{content:"";position:absolute;inset:0;z-index:-1;pointer-
 @media (min-width:1025px){.hero>video.bg{width:122%;right:auto;object-position:50% 64%}}
 
 .mapbox{margin-top:24px;border-radius:16px;overflow:hidden;border:1px solid var(--line);box-shadow:0 4px 14px rgba(1,22,74,.12)}.mapbox iframe{display:block;width:100%;height:320px;border:0}@media (max-width:700px){.mapbox iframe{height:260px}}
+/* Celular: nada debe ensanchar la página (el menú lateral cerrado quedaba fuera de pantalla y permitía arrastrarla hacia la derecha) */
+html,body{max-width:100%;overflow-x:clip}
+.nav{overflow-x:clip}
