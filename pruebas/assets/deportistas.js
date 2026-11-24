@@ -5,7 +5,7 @@ var INS_KEY='dgym_insc',TODAY=new Date().toISOString().slice(0,10);
 var $=function(s){return document.querySelector(s)};
 function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function fmt(n){return '$ '+Number(n).toLocaleString('es-CO')}
-var PLAN={'12':'12 clases (competencia)','8':'8 clases (recreativo)','4':'4 clases (recreativo)','dance':'Dance'},PRICE={'12':150000,'8':120000,'4':100000,'dance':100000};
+var PLAN={'12':'12 clases (competencia)','8':'8 clases (formativo)','4':'4 clases (recreativo)','dance':'Dance'},PRICE={'12':170000,'8':150000,'4':100000,'dance':100000};
 var CVD=[{n:'Spartan',dias:'sáb y dom'},{n:'White Bulls',dias:'lun, mié y sáb'},{n:'Black Bulls',dias:'2 a 3 veces al año'},{n:'San Bonifacio',dias:'domingos, ~2 al mes'},{n:'Lúdicas',dias:'viernes en la mañana'},{n:'Acrotelas',dias:'días por definir'}];
 function cvLabel(c){return c.n+' ('+c.dias+')'}
 var ING=[['alq1','Alquiler 1 hora',6000],['alq2','Alquiler 2 horas',10000],['alq3','Alquiler 3 horas',15000],['ing','Ingreso al gimnasio',10000]];

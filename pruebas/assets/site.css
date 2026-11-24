@@ -738,3 +738,17 @@ section.dark.tex::after{content:"";position:absolute;inset:0;z-index:-1;pointer-
 /* Celular: nada debe ensanchar la página (el menú lateral cerrado quedaba fuera de pantalla y permitía arrastrarla hacia la derecha) */
 html{max-width:100%;overflow-x:hidden;overflow-x:clip}
 body{max-width:100%;overflow-x:clip}
+
+/* Misión, valores y servicios */
+.mision-t{max-width:60em;font-size:clamp(17px,1.5vw,19px);line-height:1.65;color:var(--ink,inherit)}
+.vals-t{margin:clamp(28px,4vw,44px) 0 18px;font-size:clamp(20px,2vw,24px)}
+.grid.five{display:flex;flex-wrap:wrap;justify-content:center;gap:20px}
+.grid.five>*{flex:0 1 calc((100% - 40px)/3)}
+@media (max-width:900px){.grid.five>*{flex-basis:calc((100% - 20px)/2)}}
+@media (max-width:600px){.grid.five>*{flex-basis:100%}}
+
+/* Equipo: cinco fichas en una sola fila en computador */
+.g5{grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}
+.g5 .coach h3{font-size:17px}.g5 .coach .tx{padding:16px 16px 18px}
+@media (max-width:1024px){.g5{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:600px){.g5{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.g5 .coach h3{font-size:16px}}
