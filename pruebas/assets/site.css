@@ -752,3 +752,7 @@ body{max-width:100%;overflow-x:clip}
 .g5 .coach h3{font-size:17px}.g5 .coach .tx{padding:16px 16px 18px}
 @media (max-width:1024px){.g5{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:600px){.g5{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.g5 .coach h3{font-size:16px}}
+
+/* Inicio: foto grupal horizontal, completa */
+.tight .media.wide{max-width:640px}.tight .media.wide img{aspect-ratio:1280/965;height:auto;object-position:center}
+@media (min-width:901px){.tight.split:has(.media.wide),.tight .split:has(.media.wide){grid-template-columns:1fr 1.15fr}}
